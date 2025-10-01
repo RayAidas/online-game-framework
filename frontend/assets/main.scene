@@ -536,8 +536,8 @@
       "__id__": 2
     },
     "component": "",
-    "_componentId": "b2fa3z7PiRFNZXHk7wIB0qy",
-    "handler": "send",
+    "_componentId": "91b4f4SfHRHvKKEFe4VWknZ",
+    "handler": "createRoom",
     "customEventData": ""
   },
   {
@@ -1091,7 +1091,7 @@
     "_id": "56IZN175dGT54hmqUOpzMX"
   },
   {
-    "__type__": "b2fa3z7PiRFNZXHk7wIB0qy",
+    "__type__": "91b4f4SfHRHvKKEFe4VWknZ",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -1100,13 +1100,10 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "input": {
+    "inputRoomName": {
       "__id__": 22
     },
-    "list": {
-      "__id__": 23
-    },
-    "_id": "45Htc5asFCXYXXwW7zRiDe"
+    "_id": "adMBhQf7xBRJ1mFfZnOe4r"
   },
   {
     "__type__": "cc.SceneGlobals",

@@ -17,7 +17,7 @@
 // 		// Connect at startup
 // 		this.client.connect().then((v) => {
 // 			if (!v.isSucc) {
-// 				alert("= Client Connect Error =\n" + v.errMsg);
+// 				console.log("= Client Connect Error =\n" + v.errMsg);
 // 			}
 // 		});
 
@@ -36,7 +36,7 @@
 
 // 		// Error
 // 		if (!ret.isSucc) {
-// 			alert(ret.err.message);
+// 			console.log(ret.err.message);
 // 			return;
 // 		}
 

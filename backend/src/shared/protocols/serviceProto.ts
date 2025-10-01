@@ -14,6 +14,8 @@ import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
 import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
+import { ReqLogin, ResLogin } from './userServer/PtlLogin';
+import { ReqLogout, ResLogout } from './userServer/PtlLogout';
 
 export interface ServiceType {
     api: {
@@ -52,6 +54,14 @@ export interface ServiceType {
         "roomServer/SendChat": {
             req: ReqSendChat,
             res: ResSendChat
+        },
+        "userServer/Login": {
+            req: ReqLogin,
+            res: ResLogin
+        },
+        "userServer/Logout": {
+            req: ReqLogout,
+            res: ResLogout
         }
     },
     msg: {
@@ -65,7 +75,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 1,
+    "version": 7,
     "services": [
         {
             "id": 2,
@@ -150,6 +160,18 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "id": 16,
             "name": "roomServer/serverMsg/UserStates",
             "type": "msg"
+        },
+        {
+            "id": 17,
+            "name": "userServer/Login",
+            "type": "api",
+            "conf": {}
+        },
+        {
+            "id": 18,
+            "name": "userServer/Logout",
+            "type": "api",
+            "conf": {}
         }
     ],
     "types": {
@@ -561,7 +583,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "base/BaseRequest": {
-            "type": "Interface"
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
         },
         "roomServer/PtlExitRoom/ResExitRoom": {
             "type": "Interface",
@@ -576,7 +608,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "base/BaseResponse": {
-            "type": "Interface"
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
         },
         "roomServer/PtlJoinRoom/ReqJoinRoom": {
             "type": "Interface",
@@ -947,6 +989,116 @@ export const serviceProto: ServiceProto<ServiceType> = {
                                 "target": "../types/RoomUserState/RoomUserState"
                             }
                         }
+                    }
+                }
+            ]
+        },
+        "userServer/PtlLogin/ReqLogin": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "username",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "password",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "userServer/PtlLogin/ResLogin": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseResponse"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../models/CurrentUser/CurrentUser"
+                    }
+                }
+            ]
+        },
+        "../models/CurrentUser/CurrentUser": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "uid",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "username",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "roles",
+                    "type": {
+                        "type": "Array",
+                        "elementType": {
+                            "type": "String"
+                        }
+                    }
+                }
+            ]
+        },
+        "userServer/PtlLogout/ReqLogout": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseRequest"
+                    }
+                }
+            ]
+        },
+        "userServer/PtlLogout/ResLogout": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseResponse"
                     }
                 }
             ]
