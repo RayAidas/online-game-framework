@@ -4,73 +4,86 @@ import { CurrentUser } from "../shared/models/CurrentUser";
 const SSO_VALID_TIME = 86400000 * 7;
 
 export class UserUtil {
+	// Store data in memory for test
+	// You can store data into database
+	static users: {
+		uid: number;
+		username: string;
+		password: string;
+		roles: string[];
+	}[] = [
+		{
+			uid: 1,
+			username: "Normal",
+			password: "123456",
+			roles: ["Normal"],
+		},
+		{
+			uid: 2,
+			username: "Admin",
+			password: "123456",
+			roles: ["Admin"],
+		},
+	];
 
-    // Store data in memory for test
-    // You can store data into database
-    static users: {
-        uid: number,
-        username: string,
-        password: string,
-        roles: string[]
-    }[] = [
-            {
-                uid: 1,
-                username: 'Normal',
-                password: '123456',
-                roles: ['Normal']
-            },
-            {
-                uid: 2,
-                username: 'Admin',
-                password: '123456',
-                roles: ['Admin']
-            }
-        ];
+	static ssoTokenInfo: {
+		[token: string]: { expiredTime: number; uid: number };
+	} = {};
 
-    static ssoTokenInfo: {
-        [token: string]: { expiredTime: number, uid: number }
-    } = {};
+	static async createSsoToken(uid: number): Promise<string> {
+		let token = uuid.v1();
+		// Expired after some time without any action
+		let expiredTime = Date.now() + SSO_VALID_TIME;
 
-    static async createSsoToken(uid: number): Promise<string> {
-        let token = uuid.v1();
-        // Expired after some time without any action
-        let expiredTime = Date.now() + SSO_VALID_TIME;
+		this.ssoTokenInfo[token] = {
+			uid: uid,
+			expiredTime: expiredTime,
+		};
 
-        this.ssoTokenInfo[token] = {
-            uid: uid,
-            expiredTime: expiredTime
-        };
+		return token;
+	}
 
-        return token;
-    }
+	static async destroySsoToken(ssoToken: string): Promise<void> {
+		delete this.ssoTokenInfo[ssoToken];
+	}
 
-    static async destroySsoToken(ssoToken: string): Promise<void> {
-        delete this.ssoTokenInfo[ssoToken];
-    }
+	static async parseSSO(ssoToken: string): Promise<CurrentUser | undefined> {
+		// 检查 ssoToken 是否有效
+		if (!ssoToken) {
+			console.log("SSO Token 为空或未定义");
+			return undefined;
+		}
 
-    static async parseSSO(ssoToken: string): Promise<CurrentUser | undefined> {
-        let info = this.ssoTokenInfo[ssoToken];
-        // Token not exists or expired
-        if (!info || info.expiredTime < Date.now()) {
-            return undefined;
-        }
+		let info = this.ssoTokenInfo[ssoToken];
+		console.log("解析 SSO Token:", ssoToken.substring(0, 10) + "...");
+		console.log("Token 信息:", info);
+		console.log("当前时间:", new Date().toISOString());
 
-        // Parse User
-        let user = this.users.find(v => v.uid === info.uid);
-        if (!user) {
-            return undefined;
-        }
+		// Token not exists or expired
+		if (!info) {
+			console.log("Token 不存在于内存中");
+			return undefined;
+		}
 
-        // Extend expired time
-        info.expiredTime = Date.now() + SSO_VALID_TIME;
+		if (info.expiredTime < Date.now()) {
+			console.log("Token 已过期，过期时间:", new Date(info.expiredTime).toISOString());
+			return undefined;
+		}
 
-        // Return parsed CurrentUser
-        return {
-            uid: user.uid,
-            username: user.username,
-            roles: user.roles
-        }
+		// Parse User
+		let user = this.users.find((v) => v.uid === info.uid);
+		if (!user) {
+			return undefined;
+		}
 
-    }
+		// Extend expired time
+		info.expiredTime = Date.now() + SSO_VALID_TIME;
 
+		// Return parsed CurrentUser
+		return {
+			uid: user.uid,
+			username: user.username,
+			roles: user.roles,
+		};
+	}
 }

@@ -75,7 +75,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 7,
+    "version": 10,
     "services": [
         {
             "id": 7,
@@ -85,7 +85,10 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 8,
             "name": "matchServer/CreateRoom",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 9,
@@ -118,10 +121,7 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "name": "roomServer/admin/CreateRoom",
             "type": "api",
             "conf": {
-                "needLogin": true,
-                "needRoles": [
-                    "Admin"
-                ]
+                "needLogin": true
             }
         },
         {
@@ -1016,14 +1016,16 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "username",
                     "type": {
                         "type": "String"
-                    }
+                    },
+                    "optional": true
                 },
                 {
                     "id": 1,
                     "name": "password",
                     "type": {
                         "type": "String"
-                    }
+                    },
+                    "optional": true
                 }
             ]
         },

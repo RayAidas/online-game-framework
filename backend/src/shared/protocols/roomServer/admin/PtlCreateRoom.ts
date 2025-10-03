@@ -11,5 +11,4 @@ export interface ResCreateRoom {
 
 export const conf: BaseConf = {
 	needLogin: true,
-	needRoles: ['Admin']
 }
