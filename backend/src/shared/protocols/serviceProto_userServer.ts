@@ -1,6 +1,6 @@
 import { ServiceProto } from "tsrpc-proto";
-import { ReqLogin, ResLogin } from "./user/PtlLogin";
-import { ReqLogout, ResLogout } from "./user/PtlLogout";
+import { ReqLogin, ResLogin } from "./userServer/PtlLogin";
+import { ReqLogout, ResLogout } from "./userServer/PtlLogout";
 
 export interface ServiceType {
 	api: {

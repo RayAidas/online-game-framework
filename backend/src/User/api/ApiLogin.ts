@@ -1,6 +1,6 @@
 import { ApiCall } from "tsrpc";
 import { UserUtil } from "../../models/UserUtil";
-import { ReqLogin, ResLogin } from "../../shared/protocols/user/PtlLogin";
+import { ReqLogin, ResLogin } from "../../shared/protocols/userServer/PtlLogin";
 
 export async function ApiLogin(call: ApiCall<ReqLogin, ResLogin>) {
 	let user = UserUtil.users.find((v) => v.username === call.req.username && v.password === call.req.password);

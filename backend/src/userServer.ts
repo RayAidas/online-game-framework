@@ -3,7 +3,7 @@ import { parseCurrentUser } from "./models/parseCurrentUser";
 import { UserServer } from "./User/UserServer";
 
 export const userServer = new UserServer({
-	port: 3000,
+	port: 3003,
 });
 
 parseCurrentUser(userServer.server);
