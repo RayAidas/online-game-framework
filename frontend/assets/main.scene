@@ -536,8 +536,8 @@
       "__id__": 2
     },
     "component": "",
-    "_componentId": "91b4f4SfHRHvKKEFe4VWknZ",
-    "handler": "createRoom",
+    "_componentId": "a4d636uxslOi7WLNN7ilAhj",
+    "handler": "onLogin",
     "customEventData": ""
   },
   {
@@ -1091,7 +1091,7 @@
     "_id": "56IZN175dGT54hmqUOpzMX"
   },
   {
-    "__type__": "91b4f4SfHRHvKKEFe4VWknZ",
+    "__type__": "a4d636uxslOi7WLNN7ilAhj",
     "_name": "",
     "_objFlags": 0,
     "__editorExtras__": {},
@@ -1100,10 +1100,7 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "inputRoomName": {
-      "__id__": 22
-    },
-    "_id": "adMBhQf7xBRJ1mFfZnOe4r"
+    "_id": "7f9hjRnDdCrLtILafJEJMN"
   },
   {
     "__type__": "cc.SceneGlobals",
