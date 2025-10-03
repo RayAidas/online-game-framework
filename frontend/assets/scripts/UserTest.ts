@@ -15,7 +15,7 @@ export class UserTest extends Component {
 	update(deltaTime: number) {}
 
 	onLogin() {
-		this.client.callApi("user/Login", {
+		this.client.callApi("Login", {
 			username: "Admin",
 			password: "123456",
 		});

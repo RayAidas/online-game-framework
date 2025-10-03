@@ -1,6 +1,6 @@
 import { HttpClient } from "tsrpc-browser";
 import { BaseResponse } from "./shared/protocols/base";
-import { serviceProto } from "./shared/protocols/serviceProto";
+import { serviceProto } from "./shared/protocols/serviceProto_userServer";
 
 // Create Client
 const client = new HttpClient(serviceProto, {
