@@ -16,11 +16,11 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_uid (uid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 插入默认用户数据
+-- 插入默认用户数据（使用加密密码）
 INSERT IGNORE INTO users (username, password, roles) VALUES 
-('Normal', '123456', '["Normal"]'),
-('Admin', '123456', '["Admin"]'),
-('TestUser', 'test123', '["Normal", "Tester"]');
+('Normal', '$2b$12$yX7jAA3GmhIQOuOSKMFOOOJfSRU15t7AVSm66KiMbYfkQw90DTwQO', '["Normal"]'),
+('Admin', '$2b$12$vJZMgu/AZVyGa9ZZ5kR3SuB34VhTks6dALHL3ZZAnCJp0FpdEY5Ui', '["Admin"]'),
+('TestUser', '$2b$12$tZc5jOHoPsCTQv.iXie9Yu8t3TvrST6p5EO8j.O1cxDXzC2AgUyHG', '["Normal", "Tester"]');
 
 -- 创建游戏房间表（可选）
 CREATE TABLE IF NOT EXISTS game_rooms (

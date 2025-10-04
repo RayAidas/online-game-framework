@@ -1,14 +1,9 @@
-import { enableAuthentication } from "./models/enableAuthentication";
-import { parseCurrentUser } from "./models/parseCurrentUser";
-import { UserUtil } from "./models/UserUtil";
-import { UserServer } from "./User/UserServer";
+import { DatabaseService, TokenService } from "./services";
+import { UserServer } from "./UserServer/UserServer";
 
 export const userServer = new UserServer({
 	port: 3003,
 });
-
-parseCurrentUser(userServer.server);
-enableAuthentication(userServer.server);
 
 // 定期清理过期 token 的定时任务
 let cleanupInterval: NodeJS.Timeout | null = null;
@@ -17,7 +12,7 @@ function startTokenCleanup() {
 	// 每 5 分钟清理一次过期的 token
 	cleanupInterval = setInterval(async () => {
 		try {
-			const cleanedCount = await UserUtil.cleanupExpiredTokens();
+			const cleanedCount = await TokenService.cleanupExpiredTokens();
 			if (cleanedCount > 0) {
 				console.log(`定时清理完成，清理了 ${cleanedCount} 个过期 token`);
 			}
@@ -37,7 +32,7 @@ function stopTokenCleanup() {
 // Entry function
 async function main() {
 	// 初始化数据库连接
-	await UserUtil.init();
+	await DatabaseService.initialize();
 
 	// 启动定时清理任务
 	startTokenCleanup();

@@ -1,10 +1,10 @@
-import "./models/parseCurrentUser";
-import { UserUtil } from "./models/UserUtil";
+import { enableAuthentication, parseCurrentUser } from "./flows/UserFlows";
 import { RoomServer } from "./RoomServer/RoomServer";
+import { DatabaseService } from "./services";
 
 // env config
-const port = parseInt(process.env["PORT"] || "3001");
-const matchServerUrl = process.env["MATCH_SERVER_URL"] || "http://127.0.0.1:3000";
+const port = parseInt(process.env.ROOM_PORT || "3001");
+const matchServerUrl = process.env["MATCH_SERVER_URL"] || "http://127.0.0.1:3004";
 const thisServerUrl = process.env["THIS_SERVER_URL"] || "ws://127.0.0.1:" + port;
 
 export const roomServer = new RoomServer({
@@ -14,22 +14,14 @@ export const roomServer = new RoomServer({
 	thisServerUrl: thisServerUrl,
 });
 
-roomServer.server.flows.preApiCallFlow.push(async (call) => {
-	// 解析登录态
-	call.currentUser = await UserUtil.parseSSO(call.req.__ssoToken);
-	// 获取协议配置
-	let conf = call.service.conf;
-	// 若协议配置为需要登录，则阻止未登录的请求
-	if (conf?.needLogin && !call.currentUser) {
-		call.error("您还未登录", { code: "NEED_LOGIN" });
-		return undefined;
-	}
-
-	return call;
-});
+parseCurrentUser(roomServer.server);
+enableAuthentication(roomServer.server);
 
 // Entry function
 async function main() {
+	// 初始化数据库连接
+	await DatabaseService.initialize();
+
 	await roomServer.init();
 	await roomServer.start();
 }

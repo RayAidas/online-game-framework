@@ -4,7 +4,7 @@ import { serviceProto } from "./shared/protocols/serviceProto_matchServer";
 
 export const getMatchClient = function () {
 	const client = new HttpClient(serviceProto, {
-		server: "http://127.0.0.1:3000",
+		server: "http://127.0.0.1:3004",
 		logger: console,
 	});
 
