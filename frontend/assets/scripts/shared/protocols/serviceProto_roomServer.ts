@@ -45,19 +45,25 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 1,
+    "version": 3,
     "services": [
         {
             "id": 0,
             "name": "admin/UpdateRoomState",
-            "type": "msg"
+            "type": "msg",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 1,
             "name": "admin/Auth",
             "type": "api",
             "conf": {
-                "allowGuest": true
+                "needLogin": true,
+                "needRoles": [
+                    "Admin"
+                ]
             }
         },
         {
@@ -65,7 +71,7 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "name": "admin/CreateRoom",
             "type": "api",
             "conf": {
-                "allowGuest": true
+                "needLogin": true
             }
         },
         {
@@ -77,19 +83,25 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "id": 4,
             "name": "ExitRoom",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 5,
             "name": "JoinRoom",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 6,
             "name": "SendChat",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 7,
@@ -389,7 +401,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "../base/BaseRequest": {
-            "type": "Interface"
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
         },
         "PtlExitRoom/ResExitRoom": {
             "type": "Interface",
@@ -404,7 +426,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "../base/BaseResponse": {
-            "type": "Interface"
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
         },
         "PtlJoinRoom/ReqJoinRoom": {
             "type": "Interface",

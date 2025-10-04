@@ -29,26 +29,39 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
+    "version": 2,
     "services": [
         {
             "id": 0,
             "name": "admin/RoomServerJoin",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 1,
             "name": "CreateRoom",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 2,
             "name": "ListRooms",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 3,
             "name": "StartMatch",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         }
     ],
     "types": {

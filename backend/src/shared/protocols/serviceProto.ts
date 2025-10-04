@@ -75,12 +75,15 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 13,
+    "version": 14,
     "services": [
         {
             "id": 22,
             "name": "matchServer/admin/RoomServerJoin",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 23,
@@ -93,17 +96,26 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 24,
             "name": "matchServer/ListRooms",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 25,
             "name": "matchServer/StartMatch",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 11,
             "name": "roomServer/admin/UpdateRoomState",
-            "type": "msg"
+            "type": "msg",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 12,
@@ -133,19 +145,25 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "id": 15,
             "name": "roomServer/ExitRoom",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 16,
             "name": "roomServer/JoinRoom",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 17,
             "name": "roomServer/SendChat",
             "type": "api",
-            "conf": {}
+            "conf": {
+                "needLogin": true
+            }
         },
         {
             "id": 18,

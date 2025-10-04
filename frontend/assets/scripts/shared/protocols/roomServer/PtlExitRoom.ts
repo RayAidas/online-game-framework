@@ -9,5 +9,5 @@ export interface ResExitRoom extends BaseResponse {
 }
 
 export const conf: BaseConf = {
-
-}
+	needLogin: true,
+};

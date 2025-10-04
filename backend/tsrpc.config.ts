@@ -11,6 +11,30 @@ export default <TsrpcConfig>{
 			ptlTemplate: { baseFile: "src/shared/protocols/base.ts" },
 			// msgTemplate: { baseFile: 'src/shared/protocols/base.ts' },
 		},
+		// MatchServer 协议
+		{
+			ptlDir: "src/shared/protocols/matchServer",
+			output: "src/shared/protocols/serviceProto_matchServer.ts",
+			apiDir: "src/api/matchServer",
+			docDir: "docs/matchServer",
+			ptlTemplate: { baseFile: "src/shared/protocols/base.ts" },
+		},
+		// RoomServer 协议
+		{
+			ptlDir: "src/shared/protocols/roomServer",
+			output: "src/shared/protocols/serviceProto_roomServer.ts",
+			apiDir: "src/api/roomServer",
+			docDir: "docs/roomServer",
+			ptlTemplate: { baseFile: "src/shared/protocols/base.ts" },
+		},
+		// UserServer 协议
+		{
+			ptlDir: "src/shared/protocols/userServer",
+			output: "src/shared/protocols/serviceProto_userServer.ts",
+			apiDir: "src/api/userServer",
+			docDir: "docs/userServer",
+			ptlTemplate: { baseFile: "src/shared/protocols/base.ts" },
+		},
 	],
 	// Sync shared code
 	sync: [

@@ -13,5 +13,5 @@ export interface ResJoinRoom extends BaseResponse {
 }
 
 export const conf: BaseConf = {
-
-}
+	needLogin: true,
+};

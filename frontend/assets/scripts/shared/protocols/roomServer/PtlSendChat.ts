@@ -9,5 +9,5 @@ export interface ResSendChat extends BaseResponse {
 }
 
 export const conf: BaseConf = {
-
-}
+	needLogin: true,
+};
