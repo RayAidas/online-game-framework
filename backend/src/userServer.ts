@@ -1,5 +1,6 @@
 import { enableAuthentication } from "./models/enableAuthentication";
 import { parseCurrentUser } from "./models/parseCurrentUser";
+import { UserUtil } from "./models/UserUtil";
 import { UserServer } from "./User/UserServer";
 
 export const userServer = new UserServer({
@@ -9,8 +10,38 @@ export const userServer = new UserServer({
 parseCurrentUser(userServer.server);
 enableAuthentication(userServer.server);
 
+// 定期清理过期 token 的定时任务
+let cleanupInterval: NodeJS.Timeout | null = null;
+
+function startTokenCleanup() {
+	// 每 5 分钟清理一次过期的 token
+	cleanupInterval = setInterval(async () => {
+		try {
+			const cleanedCount = await UserUtil.cleanupExpiredTokens();
+			if (cleanedCount > 0) {
+				console.log(`定时清理完成，清理了 ${cleanedCount} 个过期 token`);
+			}
+		} catch (error) {
+			console.error("定时清理 token 失败:", error);
+		}
+	}, 5 * 60 * 1000); // 5 分钟
+}
+
+function stopTokenCleanup() {
+	if (cleanupInterval) {
+		clearInterval(cleanupInterval);
+		cleanupInterval = null;
+	}
+}
+
 // Entry function
 async function main() {
+	// 初始化数据库连接
+	await UserUtil.init();
+
+	// 启动定时清理任务
+	startTokenCleanup();
+
 	await userServer.init();
 	await userServer.start();
 }

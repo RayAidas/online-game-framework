@@ -16,8 +16,8 @@ export async function ApiLogin(call: ApiCall<ReqLogin, ResLogin>) {
 			return;
 		}
 
-		// 找到用户信息
-		const user = UserUtil.users.find((v) => v.uid === currentUser.uid);
+		// 从数据库获取用户信息
+		const user = await UserUtil.getUserById(currentUser.uid);
 		if (!user) {
 			call.error("用户不存在", { code: "USER_NOT_FOUND" });
 			return;
@@ -37,17 +37,30 @@ export async function ApiLogin(call: ApiCall<ReqLogin, ResLogin>) {
 	if (call.req.username && call.req.password) {
 		console.log("尝试通过用户名密码登录...");
 
-		let user = UserUtil.users.find((v) => v.username === call.req.username && v.password === call.req.password);
+		// 使用新的数据库验证方法
+		const user = await UserUtil.validateUser(call.req.username, call.req.password);
 		if (!user) {
 			call.error("用户名或密码错误", { code: "INVALID_CREDENTIALS" });
 			return;
 		}
 
+		// 清除该用户的所有旧 token（单点登录）
+		await UserUtil.clearUserTokens(user.uid);
+
+		// 创建新的 token
 		let sso = await UserUtil.createSsoToken(user.uid);
+
+		// 记录 token 数量（用于监控）
+		const tokenCount = await UserUtil.getUserTokenCount(user.uid);
+		console.log(`用户 ${user.username} 登录成功，当前有效 token 数量: ${tokenCount}`);
 
 		call.succ({
 			__ssoToken: sso,
-			user: user,
+			user: {
+				uid: user.uid,
+				username: user.username,
+				roles: user.roles,
+			},
 		});
 		return;
 	}

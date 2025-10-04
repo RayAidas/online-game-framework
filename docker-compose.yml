@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+    # MySQL 数据库服务
+    mysql:
+        image: mysql:8.0
+        container_name: gameonline-mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: gameonline123
+            MYSQL_DATABASE: gameonline
+            MYSQL_USER: gameonline
+            MYSQL_PASSWORD: gameonline123
+        ports:
+            - "3306:3306"
+        volumes:
+            - mysql_data:/var/lib/mysql
+            - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+        command: --default-authentication-plugin=mysql_native_password
+        networks:
+            - gameonline-network
+
+    # Redis 缓存服务
+    redis:
+        image: redis:7-alpine
+        container_name: gameonline-redis
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        command: redis-server --appendonly yes
+        networks:
+            - gameonline-network
+
+    # phpMyAdmin (可选，用于数据库管理)
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: gameonline-phpmyadmin
+        restart: unless-stopped
+        environment:
+            PMA_HOST: mysql
+            PMA_PORT: 3306
+            PMA_USER: root
+            PMA_PASSWORD: gameonline123
+        ports:
+            - "8080:80"
+        depends_on:
+            - mysql
+        networks:
+            - gameonline-network
+
+    # Redis Commander (可选，用于 Redis 管理)
+    redis-commander:
+        image: rediscommander/redis-commander:latest
+        container_name: gameonline-redis-commander
+        restart: unless-stopped
+        environment:
+            REDIS_HOSTS: local:redis:6379
+        ports:
+            - "8081:8081"
+        depends_on:
+            - redis
+        networks:
+            - gameonline-network
+
+volumes:
+    mysql_data:
+        driver: local
+    redis_data:
+        driver: local
+
+networks:
+    gameonline-network:
+        driver: bridge
