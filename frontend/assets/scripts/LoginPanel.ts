@@ -3,11 +3,11 @@ import { HttpClient } from "tsrpc-browser";
 import { getUserClient } from "./getUserClient";
 import { CurrentUser } from "./shared/models/CurrentUser";
 import { userManager } from "./shared/models/UserManager";
-import { ServiceType } from "./shared/protocols/serviceProto_userServer";
+import { ServiceType } from "./shared/protocols/serviceProto";
 const { ccclass, property } = _decorator;
 
-@ccclass("UserTest")
-export class UserTest extends Component {
+@ccclass("LoginPanel")
+export class LoginPanel extends Component {
 	@property(EditBox)
 	username: EditBox = null!;
 	@property(EditBox)
@@ -72,7 +72,7 @@ export class UserTest extends Component {
 		// 调用登录 API，但只传递 SSO Token
 		// 后端会通过 SSO Token 验证用户身份
 		this.client
-			.callApi("Login", request as any)
+			.callApi("userServer/Login", request)
 			.then((result) => {
 				if (result.isSucc) {
 					console.log("自动登录成功！");
@@ -102,10 +102,17 @@ export class UserTest extends Component {
 			return;
 		}
 
-		this.client.callApi("Login", {
+		this.client.callApi("userServer/Login", {
 			username: this.username.string,
 			password: this.password.string,
 		});
+	}
+
+	onRegister() {
+		// this.client.callApi("Register", {
+		// 	username: this.username.string,
+		// 	password: this.password.string,
+		// });
 	}
 
 	onLogin() {
@@ -118,7 +125,7 @@ export class UserTest extends Component {
 	}
 
 	onLogout() {
-		this.client.callApi("Logout", {});
+		this.client.callApi("userServer/Logout", {});
 	}
 
 	getUserInfo() {

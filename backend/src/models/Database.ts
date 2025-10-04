@@ -52,6 +52,7 @@ export interface User {
 	uid: number;
 	username: string;
 	password: string;
+	email?: string;
 	roles: string[];
 	created_at?: Date;
 	updated_at?: Date;

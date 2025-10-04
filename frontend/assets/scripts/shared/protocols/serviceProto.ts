@@ -75,25 +75,28 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 7,
+    "version": 13,
     "services": [
         {
-            "id": 7,
+            "id": 22,
             "name": "matchServer/admin/RoomServerJoin",
             "type": "api"
         },
         {
-            "id": 8,
+            "id": 23,
             "name": "matchServer/CreateRoom",
-            "type": "api"
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
         },
         {
-            "id": 9,
+            "id": 24,
             "name": "matchServer/ListRooms",
             "type": "api"
         },
         {
-            "id": 10,
+            "id": 25,
             "name": "matchServer/StartMatch",
             "type": "api"
         },
@@ -118,10 +121,7 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "name": "roomServer/admin/CreateRoom",
             "type": "api",
             "conf": {
-                "needLogin": true,
-                "needRoles": [
-                    "Admin"
-                ]
+                "needLogin": true
             }
         },
         {
@@ -1016,14 +1016,16 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "username",
                     "type": {
                         "type": "String"
-                    }
+                    },
+                    "optional": true
                 },
                 {
                     "id": 1,
                     "name": "password",
                     "type": {
                         "type": "String"
-                    }
+                    },
+                    "optional": true
                 }
             ]
         },
