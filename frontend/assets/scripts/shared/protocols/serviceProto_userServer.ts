@@ -1,6 +1,7 @@
 import { ServiceProto } from 'tsrpc-proto';
 import { ReqLogin, ResLogin } from './userServer/PtlLogin';
 import { ReqLogout, ResLogout } from './userServer/PtlLogout';
+import { ReqRegister, ResRegister } from './userServer/PtlRegister';
 
 export interface ServiceType {
     api: {
@@ -11,6 +12,10 @@ export interface ServiceType {
         "Logout": {
             req: ReqLogout,
             res: ResLogout
+        },
+        "Register": {
+            req: ReqRegister,
+            res: ResRegister
         }
     },
     msg: {
@@ -19,7 +24,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 7,
+    "version": 9,
     "services": [
         {
             "id": 3,
@@ -30,6 +35,12 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 4,
             "name": "Logout",
+            "type": "api",
+            "conf": {}
+        },
+        {
+            "id": 5,
+            "name": "Register",
             "type": "api",
             "conf": {}
         }
@@ -169,6 +180,63 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Reference",
                         "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
+        "PtlRegister/ReqRegister": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "username",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "password",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "PtlRegister/ResRegister": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../models/CurrentUser/CurrentUser"
                     }
                 }
             ]

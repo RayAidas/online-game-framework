@@ -1,8 +1,8 @@
 import { uint } from "tsrpc-proto";
-import { BaseConf } from "../base";
-export interface ReqListRooms {}
+import { BaseConf, BaseRequest, BaseResponse } from "../base";
+export interface ReqListRooms extends BaseRequest {}
 
-export interface ResListRooms {
+export interface ResListRooms extends BaseResponse {
 	rooms: {
 		name: string;
 		userNum: uint;

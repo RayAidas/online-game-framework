@@ -17,7 +17,6 @@ export class MatchTest extends Component {
 		// 监听用户状态变化
 		userManager.onUserChange((user) => {
 			this.currentUser = user;
-			console.log("用户状态更新:", user);
 		});
 
 		// 初始化当前用户状态

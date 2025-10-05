@@ -1,5 +1,5 @@
 import { ApiCall } from "tsrpc";
-import { ReqRoomServerJoin, ResRoomServerJoin } from "../../../shared/protocols/matchServer/admin/PtlRoomServerJoin";
+import { ReqRoomServerJoin, ResRoomServerJoin } from "../../shared/protocols/matchServer/PtlRoomServerJoin";
 
 export default async function (call: ApiCall<ReqRoomServerJoin, ResRoomServerJoin>) {
     // TODO

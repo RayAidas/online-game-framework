@@ -1,10 +1,10 @@
-import { BaseConf } from "../base";
+import { BaseConf, BaseRequest, BaseResponse } from "../base";
 
-export interface ReqCreateRoom {
+export interface ReqCreateRoom extends BaseRequest {
 	roomName: string;
 }
 
-export interface ResCreateRoom {
+export interface ResCreateRoom extends BaseResponse {
 	serverUrl: string;
 	roomId: string;
 }

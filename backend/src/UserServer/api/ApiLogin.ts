@@ -8,6 +8,8 @@ export async function ApiLogin(call: ApiCall<ReqLogin, ResLogin>) {
 		const result = await AuthService.loginWithToken(call.req.__ssoToken);
 
 		if (result.success) {
+			// 设置当前用户信息
+			call.currentUser = result.user!;
 			call.succ({
 				__ssoToken: result.token!,
 				user: result.user!,
@@ -23,6 +25,9 @@ export async function ApiLogin(call: ApiCall<ReqLogin, ResLogin>) {
 		const result = await AuthService.loginWithCredentials(call.req.username, call.req.password);
 
 		if (result.success) {
+			// 设置当前用户信息
+			call.currentUser = result.user!;
+
 			call.succ({
 				__ssoToken: result.token!,
 				user: result.user!,

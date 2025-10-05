@@ -132,7 +132,7 @@ export class TokenService {
 	/**
 	 * 解析 SSO Token 并返回用户信息
 	 */
-	static async parseSSO(ssoToken: string): Promise<{ uid: number; username: string; roles: string[] } | null> {
+	static async parseSSO(ssoToken: string): Promise<SSOTokenInfo | null> {
 		if (!ssoToken) {
 			console.log("SSO Token 为空或未定义");
 			return null;
@@ -165,8 +165,7 @@ export class TokenService {
 
 		return {
 			uid: info.uid,
-			username: "", // 这里需要从数据库获取，但为了保持接口简洁，暂时返回空
-			roles: [], // 这里需要从数据库获取，但为了保持接口简洁，暂时返回空
+			expiredTime: info.expiredTime,
 		};
 	}
 }

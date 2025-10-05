@@ -1,5 +1,6 @@
 import path from "path";
 import { HttpServer } from "tsrpc";
+import { enableAuthentication, parseCurrentUser } from "../flows/UserFlows";
 import { serviceProto } from "../shared/protocols/serviceProto_userServer";
 
 export interface UserServerOptions {
@@ -14,7 +15,9 @@ export class UserServer {
 	});
 
 	constructor(public readonly options: UserServerOptions) {
-
+		// 启用用户认证流程
+		parseCurrentUser(this.server);
+		enableAuthentication(this.server);
 	}
 
 	async init() {

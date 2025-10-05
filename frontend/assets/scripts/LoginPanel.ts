@@ -3,7 +3,7 @@ import { HttpClient } from "tsrpc-browser";
 import { getUserClient } from "./getUserClient";
 import { CurrentUser } from "./shared/models/CurrentUser";
 import { userManager } from "./shared/models/UserManager";
-import { ServiceType } from "./shared/protocols/serviceProto";
+import { ServiceType } from "./shared/protocols/serviceProto_userServer";
 const { ccclass, property } = _decorator;
 
 @ccclass("LoginPanel")
@@ -72,7 +72,7 @@ export class LoginPanel extends Component {
 		// 调用登录 API，但只传递 SSO Token
 		// 后端会通过 SSO Token 验证用户身份
 		this.client
-			.callApi("userServer/Login", request)
+			.callApi("Login", request)
 			.then((result) => {
 				if (result.isSucc) {
 					console.log("自动登录成功！");
@@ -102,17 +102,17 @@ export class LoginPanel extends Component {
 			return;
 		}
 
-		this.client.callApi("userServer/Login", {
+		this.client.callApi("Login", {
 			username: this.username.string,
 			password: this.password.string,
 		});
 	}
 
 	onRegister() {
-		// this.client.callApi("Register", {
-		// 	username: this.username.string,
-		// 	password: this.password.string,
-		// });
+		this.client.callApi("Register", {
+			username: this.username.string,
+			password: this.password.string,
+		});
 	}
 
 	onLogin() {
@@ -125,7 +125,7 @@ export class LoginPanel extends Component {
 	}
 
 	onLogout() {
-		this.client.callApi("userServer/Logout", {});
+		this.client.callApi("Logout", {});
 	}
 
 	getUserInfo() {

@@ -1,15 +1,11 @@
 import { ServiceProto } from 'tsrpc-proto';
-import { ReqRoomServerJoin, ResRoomServerJoin } from './matchServer/admin/PtlRoomServerJoin';
 import { ReqCreateRoom, ResCreateRoom } from './matchServer/PtlCreateRoom';
 import { ReqListRooms, ResListRooms } from './matchServer/PtlListRooms';
+import { ReqRoomServerJoin, ResRoomServerJoin } from './matchServer/PtlRoomServerJoin';
 import { ReqStartMatch, ResStartMatch } from './matchServer/PtlStartMatch';
 
 export interface ServiceType {
     api: {
-        "admin/RoomServerJoin": {
-            req: ReqRoomServerJoin,
-            res: ResRoomServerJoin
-        },
         "CreateRoom": {
             req: ReqCreateRoom,
             res: ResCreateRoom
@@ -17,6 +13,10 @@ export interface ServiceType {
         "ListRooms": {
             req: ReqListRooms,
             res: ResListRooms
+        },
+        "RoomServerJoin": {
+            req: ReqRoomServerJoin,
+            res: ResRoomServerJoin
         },
         "StartMatch": {
             req: ReqStartMatch,
@@ -29,16 +29,8 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 2,
+    "version": 10,
     "services": [
-        {
-            "id": 0,
-            "name": "admin/RoomServerJoin",
-            "type": "api",
-            "conf": {
-                "needLogin": true
-            }
-        },
         {
             "id": 1,
             "name": "CreateRoom",
@@ -56,6 +48,12 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 4,
+            "name": "RoomServerJoin",
+            "type": "api",
+            "conf": {}
+        },
+        {
             "id": 3,
             "name": "StartMatch",
             "type": "api",
@@ -65,30 +63,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
         }
     ],
     "types": {
-        "admin/PtlRoomServerJoin/ReqRoomServerJoin": {
-            "type": "Interface",
-            "properties": [
-                {
-                    "id": 0,
-                    "name": "serverUrl",
-                    "type": {
-                        "type": "String"
-                    }
-                },
-                {
-                    "id": 1,
-                    "name": "adminToken",
-                    "type": {
-                        "type": "String"
-                    }
-                }
-            ]
-        },
-        "admin/PtlRoomServerJoin/ResRoomServerJoin": {
-            "type": "Interface"
-        },
         "PtlCreateRoom/ReqCreateRoom": {
             "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ],
             "properties": [
                 {
                     "id": 0,
@@ -99,8 +84,30 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "../base/BaseRequest": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
         "PtlCreateRoom/ResCreateRoom": {
             "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ],
             "properties": [
                 {
                     "id": 0,
@@ -118,11 +125,42 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "../base/BaseResponse": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
         "PtlListRooms/ReqListRooms": {
-            "type": "Interface"
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
         },
         "PtlListRooms/ResListRooms": {
             "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ],
             "properties": [
                 {
                     "id": 0,
@@ -175,11 +213,69 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlRoomServerJoin/ReqRoomServerJoin": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "token",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "serverUrl",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "PtlRoomServerJoin/ResRoomServerJoin": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
         "PtlStartMatch/ReqStartMatch": {
-            "type": "Interface"
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
         },
         "PtlStartMatch/ResStartMatch": {
             "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ],
             "properties": [
                 {
                     "id": 0,

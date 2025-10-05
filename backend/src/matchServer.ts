@@ -1,4 +1,3 @@
-import { parseCurrentUser, enableAuthentication } from "./flows/UserFlows";
 import { MatchServer } from "./MatchServer/MatchServer";
 import { DatabaseService } from "./services";
 
@@ -8,9 +7,6 @@ const port = parseInt(process.env.MATCH_PORT || "3004");
 export const matchServer = new MatchServer({
 	port: port,
 });
-
-parseCurrentUser(matchServer.server);
-enableAuthentication(matchServer.server);
 
 // Entry function
 async function main() {

@@ -1,4 +1,3 @@
-import { enableAuthentication, parseCurrentUser } from "./flows/UserFlows";
 import { RoomServer } from "./RoomServer/RoomServer";
 import { DatabaseService } from "./services";
 
@@ -13,9 +12,6 @@ export const roomServer = new RoomServer({
 	matchServerUrl: matchServerUrl,
 	thisServerUrl: thisServerUrl,
 });
-
-parseCurrentUser(roomServer.server);
-enableAuthentication(roomServer.server);
 
 // Entry function
 async function main() {

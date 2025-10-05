@@ -55,6 +55,20 @@ export class UserService {
 	}
 
 	/**
+	 * 检查用户名是否已存在
+	 */
+	static async isUsernameExists(username: string): Promise<boolean> {
+		try {
+			const [rows] = await mysqlPool.execute("SELECT uid FROM users WHERE username = ?", [username]);
+			const users = rows as User[];
+			return users.length > 0;
+		} catch (error) {
+			console.error("检查用户名是否存在失败:", error);
+			return false;
+		}
+	}
+
+	/**
 	 * 创建新用户
 	 */
 	static async createUser(username: string, password: string, roles: string[] = ["Normal"]): Promise<User | null> {

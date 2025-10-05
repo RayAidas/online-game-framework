@@ -2,6 +2,7 @@ import { CurrentUser } from "./CurrentUser";
 
 class UserManager {
 	private _currentUser: CurrentUser | null = null;
+	private _ssoToken: string | null = null;
 	private _listeners: Array<(user: CurrentUser | null) => void> = [];
 
 	get currentUser(): CurrentUser | null {
@@ -11,6 +12,19 @@ class UserManager {
 	set currentUser(user: CurrentUser | null) {
 		this._currentUser = user;
 		this._listeners.forEach((listener) => listener(user));
+	}
+
+	get ssoToken(): string | null {
+		return this._ssoToken;
+	}
+
+	set ssoToken(token: string | null) {
+		this._ssoToken = token;
+		if (token) {
+			localStorage.setItem("SSO_TOKEN", token);
+		} else {
+			localStorage.removeItem("SSO_TOKEN");
+		}
 	}
 
 	// 添加用户状态变化监听器
@@ -34,7 +48,15 @@ class UserManager {
 	// 登出
 	logout() {
 		this.currentUser = null;
-		localStorage.removeItem("SSO_TOKEN");
+		this.ssoToken = null;
+	}
+
+	// 初始化，从 localStorage 加载 SSO Token
+	init() {
+		const token = localStorage.getItem("SSO_TOKEN");
+		if (token) {
+			this._ssoToken = token;
+		}
 	}
 }
 

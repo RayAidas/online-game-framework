@@ -1,8 +1,8 @@
-import { BaseConf } from "../base";
+import { BaseConf, BaseRequest, BaseResponse } from "../base";
 
-export interface ReqStartMatch {}
+export interface ReqStartMatch extends BaseRequest {}
 
-export interface ResStartMatch {
+export interface ResStartMatch extends BaseResponse {
 	serverUrl: string;
 	roomId: string;
 }
