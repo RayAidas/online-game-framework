@@ -82,13 +82,14 @@ export class RoomServer {
 	matchServerConn?: RoomServerConn;
 
 	private _nextRoomId = 1;
-	createRoom(roomName: string): Room {
+	createRoom(roomName: string, ownerId?: string): Room {
 		let room = new Room({
 			id: "" + this._nextRoomId++,
 			maxUser: 50,
 			name: roomName,
 			users: [],
 			messages: [],
+			ownerId: ownerId || "",
 			startMatchTime: Date.now(),
 			updateTime: Date.now(),
 		});

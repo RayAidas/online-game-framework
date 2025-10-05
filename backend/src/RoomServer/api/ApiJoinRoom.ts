@@ -44,6 +44,11 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 		conn.currentRoom.leave(conn);
 	}
 
+	// 如果是第一个用户加入房间，设置为房主
+	if (room.data.users.length === 0) {
+		room.data.ownerId = currentUser.id;
+	}
+
 	room.conns.push(conn);
 	room.data.users.push({
 		...currentUser,

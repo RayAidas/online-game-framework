@@ -66,6 +66,9 @@ export class Room {
 		const currentUser = conn.currentUser;
 		this.logger.log("[UserLeave]", currentUser?.id);
 
+		// 检查是否是房主离开
+		const isOwner = currentUser && currentUser.id === this.data.ownerId;
+
 		this.conns.removeOne((v) => v === conn);
 		this.data.users.removeOne((v) => v.id === currentUser.id);
 		delete this.userStates[currentUser.id];
@@ -92,6 +95,30 @@ export class Room {
 				time: new Date(),
 				user: currentUser!,
 			});
+		}
+
+		// 处理房主离开的情况
+		if (isOwner) {
+			if (this.conns.length > 0) {
+				// 房间还有其他人，转让房主给下一个用户
+				const newOwner = this.conns[0].currentUser;
+				if (newOwner) {
+					this.data.ownerId = newOwner.id;
+					this.logger.log(`[UserLeave] 房主转让给用户 ${newOwner.id}`);
+
+					// 广播房主变更消息
+					this.broadcastMsg("serverMsg/OwnerChanged", {
+						time: new Date(),
+						newOwner: newOwner,
+						oldOwner: currentUser,
+					});
+				}
+			} else {
+				// 房间没人了，立即销毁房间
+				this.logger.log("[UserLeave] 房主离开，房间无人，立即销毁房间");
+				this.destroy();
+				return; // 房间已销毁，直接返回
+			}
 		}
 
 		if (this.conns.length === 0) {

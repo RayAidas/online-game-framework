@@ -183,6 +183,15 @@ export class MatchTest extends Component {
 			.then((ret) => {
 				if (ret.isSucc) {
 					console.log("退出房间成功");
+					// 断开与服务器的连接
+					this.roomClient
+						.disconnect()
+						.then(() => {
+							console.log("已断开与服务器的连接");
+						})
+						.catch((err) => {
+							console.error("断开连接失败:", err);
+						});
 				} else {
 					console.error("退出房间失败:", ret.err);
 					this.handleApiError("退出房间", ret.err);
@@ -191,6 +200,10 @@ export class MatchTest extends Component {
 			.catch((err) => {
 				console.error("退出房间 API 调用异常:", err);
 				this.handleApiError("退出房间", err);
+				// 即使API调用失败，也尝试断开连接
+				this.roomClient.disconnect().catch((disconnectErr) => {
+					console.error("强制断开连接失败:", disconnectErr);
+				});
 			});
 	}
 
