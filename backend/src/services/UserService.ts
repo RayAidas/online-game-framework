@@ -74,11 +74,11 @@ export class UserService {
 	static async createUser(username: string, password: string, roles: string[] = ["Normal"]): Promise<User | null> {
 		try {
 			// 验证密码强度
-			const passwordValidation = PasswordService.validatePasswordPolicy(password);
-			if (!passwordValidation.isValid) {
-				console.error("密码不符合安全策略:", passwordValidation.errors);
-				throw new Error(`密码不符合安全策略: ${passwordValidation.errors.join(", ")}`);
-			}
+			// const passwordValidation = PasswordService.validatePasswordPolicy(password);
+			// if (!passwordValidation.isValid) {
+			// 	console.error("密码不符合安全策略:", passwordValidation.errors);
+			// 	throw new Error(`密码不符合安全策略: ${passwordValidation.errors.join(", ")}`);
+			// }
 
 			// 加密密码
 			const hashedPassword = await PasswordService.hashPassword(password);

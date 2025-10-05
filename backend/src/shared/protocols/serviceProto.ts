@@ -1,4 +1,5 @@
 import { ServiceProto } from 'tsrpc-proto';
+import { ReqClearUserRoomState, ResClearUserRoomState } from './matchServer/PtlClearUserRoomState';
 import { ReqCreateRoom, ResCreateRoom } from './matchServer/PtlCreateRoom';
 import { ReqListRooms, ResListRooms } from './matchServer/PtlListRooms';
 import { ReqRoomServerJoin, ResRoomServerJoin } from './matchServer/PtlRoomServerJoin';
@@ -20,6 +21,10 @@ import { ReqRegister, ResRegister } from './userServer/PtlRegister';
 
 export interface ServiceType {
     api: {
+        "matchServer/ClearUserRoomState": {
+            req: ReqClearUserRoomState,
+            res: ResClearUserRoomState
+        },
         "matchServer/CreateRoom": {
             req: ReqCreateRoom,
             res: ResCreateRoom
@@ -80,8 +85,13 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 26,
+    "version": 27,
     "services": [
+        {
+            "id": 31,
+            "name": "matchServer/ClearUserRoomState",
+            "type": "api"
+        },
         {
             "id": 23,
             "name": "matchServer/CreateRoom",
@@ -203,6 +213,65 @@ export const serviceProto: ServiceProto<ServiceType> = {
         }
     ],
     "types": {
+        "matchServer/PtlClearUserRoomState/ReqClearUserRoomState": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "userId",
+                    "type": {
+                        "type": "Number"
+                    }
+                }
+            ]
+        },
+        "base/BaseRequest": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "matchServer/PtlClearUserRoomState/ResClearUserRoomState": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseResponse"
+                    }
+                }
+            ]
+        },
+        "base/BaseResponse": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "__ssoToken",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
         "matchServer/PtlCreateRoom/ReqCreateRoom": {
             "type": "Interface",
             "extends": [
@@ -221,19 +290,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "String"
                     }
-                }
-            ]
-        },
-        "base/BaseRequest": {
-            "type": "Interface",
-            "properties": [
-                {
-                    "id": 0,
-                    "name": "__ssoToken",
-                    "type": {
-                        "type": "String"
-                    },
-                    "optional": true
                 }
             ]
         },
@@ -262,19 +318,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "String"
                     }
-                }
-            ]
-        },
-        "base/BaseResponse": {
-            "type": "Interface",
-            "properties": [
-                {
-                    "id": 0,
-                    "name": "__ssoToken",
-                    "type": {
-                        "type": "String"
-                    },
-                    "optional": true
                 }
             ]
         },

@@ -3,15 +3,23 @@ import { ReqSendChat, ResSendChat } from "../../shared/protocols/roomServer/PtlS
 import { RoomServerConn } from "../RoomServer";
 
 export async function ApiSendChat(call: ApiCall<ReqSendChat, ResSendChat>) {
-    const conn = call.conn as RoomServerConn;
-    const room = conn.currentRoom;
-    const currentUser = conn.currentUser;
+	const conn = call.conn as RoomServerConn;
+	const room = conn.currentRoom;
+	const currentUser = conn.currentUser;
 
-    room.broadcastMsg('serverMsg/Chat', {
-        time: new Date,
-        content: call.req.content,
-        user: currentUser
-    })
+	if (!room) {
+		return call.error("您不在任何房间中");
+	}
 
-    call.succ({})
+	if (!currentUser) {
+		return call.error("用户信息无效");
+	}
+
+	room.broadcastMsg("serverMsg/Chat", {
+		time: new Date(),
+		content: call.req.content,
+		user: currentUser,
+	});
+
+	call.succ({});
 }

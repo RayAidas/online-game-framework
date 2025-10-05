@@ -1,5 +1,6 @@
 import { PrefixLogger } from "tsrpc";
 import { roomServer } from "../../roomServer";
+import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
 import { RoomData } from "../../shared/types/RoomData";
@@ -71,8 +72,19 @@ export class Room {
 		this.data.updateTime = Date.now();
 
 		if (conn) {
-			conn.close();
+			// 只取消监听消息，不关闭连接
 			this.unlistenMsgs(conn);
+			// 清除房间引用
+			conn.currentRoom = undefined;
+		}
+
+		// 尝试从用户ID字符串中提取数字ID来清除状态
+		if (currentUser && currentUser.id) {
+			const userId = parseInt(currentUser.id);
+			if (!isNaN(userId)) {
+				RoomStateService.userLeaveRoom(userId);
+				this.logger.log(`[UserLeave] 清除用户 ${userId} 的房间状态`);
+			}
 		}
 
 		if (currentUser) {
@@ -93,6 +105,9 @@ export class Room {
 			clearInterval(v);
 		});
 		this._intervals = [];
+
+		// 清理房间状态
+		RoomStateService.clearRoomState(this.data.id);
 
 		roomServer.rooms.removeOne((v) => v === this);
 		roomServer.id2Room.delete(this.data.id);

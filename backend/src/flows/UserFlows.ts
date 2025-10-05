@@ -1,10 +1,10 @@
-import { ApiCallHttp, HttpServer, WsServer } from "tsrpc";
+import { ApiCall, ApiCallHttp, HttpServer, WsServer } from "tsrpc";
 import { AuthService } from "../services/AuthService";
 import { BaseConf, BaseRequest, BaseResponse } from "../shared/protocols/base";
 
 export async function parseCurrentUser(server: HttpServer | WsServer) {
 	// Auto parse call.currentUser
-	await server.flows.preApiCallFlow.push(async (call: ApiCallHttp<BaseRequest, BaseResponse>) => {
+	await server.flows.preApiCallFlow.push(async (call: ApiCallHttp<BaseRequest, BaseResponse> | ApiCall<BaseRequest, BaseResponse>) => {
 		let req = call.req;
 		if (req.__ssoToken) {
 			call.currentUser = await AuthService.parseSSO(req.__ssoToken);
@@ -14,7 +14,7 @@ export async function parseCurrentUser(server: HttpServer | WsServer) {
 }
 
 export async function enableAuthentication(server: HttpServer | WsServer) {
-	await server.flows.preApiCallFlow.push((call: ApiCallHttp<BaseRequest, BaseResponse>) => {
+	await server.flows.preApiCallFlow.push((call: ApiCallHttp<BaseRequest, BaseResponse> | ApiCall<BaseRequest, BaseResponse>) => {
 		let conf: BaseConf | undefined = call.service.conf;
 
 		// NeedLogin

@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import path from "path";
 import { HttpClient, WsConnection, WsServer } from "tsrpc";
+import { parseCurrentUser } from "../flows/UserFlows";
 import { BackConfig } from "../models/BackConfig";
 import { serviceProto as serviceProto_matchServer } from "../shared/protocols/serviceProto_matchServer";
 import { serviceProto, ServiceType } from "../shared/protocols/serviceProto_roomServer";
@@ -28,6 +29,7 @@ export class RoomServer {
 	constructor(public readonly options: RoomServerOptions) {
 		// Flows
 		useCleanConn(this.server);
+		parseCurrentUser(this.server);
 
 		// 定时清除闲置的房间
 		setInterval(() => {
@@ -110,7 +112,7 @@ export class RoomServer {
 
 export type RoomServerConn = WsConnection<ServiceType> & {
 	currentUser: UserInfo;
-	currentRoom: Room;
+	currentRoom?: Room; // 改为可选，因为用户可能不在任何房间中
 	matchServer?: {
 		intervalSendState: ReturnType<typeof setInterval>;
 	};

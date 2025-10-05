@@ -3,6 +3,7 @@ import path from "path";
 import { ApiCallHttp, ApiReturn, ConnectionStatus, HttpServer, PrefixLogger, TsrpcError, WsClient } from "tsrpc";
 import { enableAuthentication, parseCurrentUser } from "../flows/UserFlows";
 import { BackConfig } from "../models/BackConfig";
+import { RoomStateService } from "../services/RoomStateService";
 import { ResCreateRoom } from "../shared/protocols/matchServer/PtlCreateRoom";
 import { ReqStartMatch, ResStartMatch } from "../shared/protocols/matchServer/PtlStartMatch";
 import { MsgUpdateRoomState } from "../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
@@ -201,7 +202,12 @@ export class MatchServer {
 	}
 	// #endregion
 
-	async createRoom(roomName: string): Promise<ApiReturn<ResCreateRoom>> {
+	async createRoom(roomName: string, userId?: number): Promise<ApiReturn<ResCreateRoom>> {
+		// 如果有用户ID，检查用户是否已经在房间中
+		if (userId && RoomStateService.isUserInRoom(userId)) {
+			return { isSucc: false, err: new TsrpcError("您已经在房间中，请先退出当前房间再创建新房间", { code: "ALREADY_IN_ROOM" }) };
+		}
+
 		// 挑选一个人数最少的 RoomServer
 		let roomServer = this.roomServers.filter((v) => v.state).orderBy((v) => v.state!.connNum)[0];
 		if (!roomServer) {
@@ -215,6 +221,11 @@ export class MatchServer {
 		});
 		if (!op.isSucc) {
 			return { isSucc: false, err: new TsrpcError(op.err) };
+		}
+
+		// 如果有用户ID，记录用户房间状态
+		if (userId) {
+			RoomStateService.userJoinRoom(userId, op.res.roomId);
 		}
 
 		// Return
