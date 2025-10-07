@@ -6,10 +6,12 @@ import { ReqCreateRoom, ResCreateRoom } from './roomServer/PtlCreateRoom';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
+import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
+import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
 import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
 
 export interface ServiceType {
@@ -33,6 +35,10 @@ export interface ServiceType {
         "SendChat": {
             req: ReqSendChat,
             res: ResSendChat
+        },
+        "SetReady": {
+            req: ReqSetReady,
+            res: ResSetReady
         }
     },
     msg: {
@@ -42,6 +48,7 @@ export interface ServiceType {
         "serverMsg/OwnerChanged": MsgOwnerChanged,
         "serverMsg/UserExit": MsgUserExit,
         "serverMsg/UserJoin": MsgUserJoin,
+        "serverMsg/UserReadyChanged": MsgUserReadyChanged,
         "serverMsg/UserStates": MsgUserStates
     }
 }
@@ -101,12 +108,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 14,
+            "name": "SetReady",
+            "type": "api"
+        },
+        {
             "id": 7,
             "name": "serverMsg/Chat",
             "type": "msg"
         },
         {
-            "id": 14,
+            "id": 15,
             "name": "serverMsg/OwnerChanged",
             "type": "msg"
         },
@@ -118,6 +130,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 9,
             "name": "serverMsg/UserJoin",
+            "type": "msg"
+        },
+        {
+            "id": 16,
+            "name": "serverMsg/UserReadyChanged",
             "type": "msg"
         },
         {
@@ -550,6 +567,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "String"
                     }
+                },
+                {
+                    "id": 2,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -737,6 +762,30 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlSetReady/ReqSetReady": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
+        "PtlSetReady/ResSetReady": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "needLogin",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
         "serverMsg/MsgChat/MsgChat": {
             "type": "Interface",
             "properties": [
@@ -861,6 +910,33 @@ export const serviceProto: ServiceProto<ServiceType> = {
                                 }
                             }
                         ]
+                    }
+                }
+            ]
+        },
+        "serverMsg/MsgUserReadyChanged/MsgUserReadyChanged": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/UserInfo/UserInfo"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]

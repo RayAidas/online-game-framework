@@ -11,10 +11,12 @@ import { ReqCreateRoom as ReqCreateRoom_1, ResCreateRoom as ResCreateRoom_1 } fr
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
+import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
+import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
 import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
 import { ReqLogin, ResLogin } from './userServer/PtlLogin';
 import { ReqLogout, ResLogout } from './userServer/PtlLogout';
@@ -62,6 +64,10 @@ export interface ServiceType {
             req: ReqSendChat,
             res: ResSendChat
         },
+        "roomServer/SetReady": {
+            req: ReqSetReady,
+            res: ResSetReady
+        },
         "userServer/Login": {
             req: ReqLogin,
             res: ResLogin
@@ -82,12 +88,13 @@ export interface ServiceType {
         "roomServer/serverMsg/OwnerChanged": MsgOwnerChanged,
         "roomServer/serverMsg/UserExit": MsgUserExit,
         "roomServer/serverMsg/UserJoin": MsgUserJoin,
+        "roomServer/serverMsg/UserReadyChanged": MsgUserReadyChanged,
         "roomServer/serverMsg/UserStates": MsgUserStates
     }
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 28,
+    "version": 29,
     "services": [
         {
             "id": 31,
@@ -176,12 +183,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 32,
+            "name": "roomServer/SetReady",
+            "type": "api"
+        },
+        {
             "id": 18,
             "name": "roomServer/serverMsg/Chat",
             "type": "msg"
         },
         {
-            "id": 32,
+            "id": 33,
             "name": "roomServer/serverMsg/OwnerChanged",
             "type": "msg"
         },
@@ -193,6 +205,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 20,
             "name": "roomServer/serverMsg/UserJoin",
+            "type": "msg"
+        },
+        {
+            "id": 34,
+            "name": "roomServer/serverMsg/UserReadyChanged",
             "type": "msg"
         },
         {
@@ -880,6 +897,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "String"
                     }
+                },
+                {
+                    "id": 2,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -1067,6 +1092,30 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "roomServer/PtlSetReady/ReqSetReady": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
+        "roomServer/PtlSetReady/ResSetReady": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "needLogin",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
         "roomServer/serverMsg/MsgChat/MsgChat": {
             "type": "Interface",
             "properties": [
@@ -1191,6 +1240,33 @@ export const serviceProto: ServiceProto<ServiceType> = {
                                 }
                             }
                         ]
+                    }
+                }
+            ]
+        },
+        "roomServer/serverMsg/MsgUserReadyChanged/MsgUserReadyChanged": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/UserInfo/UserInfo"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "isReady",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]

@@ -2,6 +2,7 @@ import { _decorator, Component, EditBox } from "cc";
 import { HttpClient, WsClient } from "tsrpc-browser";
 import { getMatchClient } from "./getMatchClient";
 import { getRoomClient } from "./getRoomClient";
+import { RoomTest } from "./RoomTest";
 import { CurrentUser } from "./shared/models/CurrentUser";
 import { userManager } from "./shared/models/UserManager";
 import { ServiceType as MatchServiceType } from "./shared/protocols/serviceProto_matchServer";
@@ -11,6 +12,7 @@ const { ccclass, property } = _decorator;
 @ccclass("MatchTest")
 export class MatchTest extends Component {
 	@property(EditBox) roomId: EditBox = null!;
+	@property(RoomTest) roomTest: RoomTest = null!;
 
 	matchClient: HttpClient<MatchServiceType>;
 	roomClient: WsClient<RoomServiceType>;
@@ -100,6 +102,17 @@ export class MatchTest extends Component {
 		this.joinRoomById(roomId);
 	}
 
+	public onStartMatch() {
+		this.matchClient.callApi("StartMatch", {}).then((ret) => {
+			if (ret.isSucc) {
+				console.log("匹配成功:", ret.res);
+				this.joinRoomById(ret.res.roomId);
+			} else {
+				console.error("匹配失败:", ret.err);
+			}
+		});
+	}
+
 	// 通过房间ID加入房间
 	private joinRoomById(roomId: string) {
 		if (!this.currentUser) {
@@ -145,91 +158,18 @@ export class MatchTest extends Component {
 			})
 			.then((ret) => {
 				if (ret.isSucc) {
+					this.roomTest.node.active = true;
+					this.roomTest.setCurrentRoom(ret.res.roomData, ret.res.currentUser, this.roomClient);
 					console.log("加入房间成功:", ret.res);
 					console.log("房间数据:", ret.res.roomData);
 					console.log("当前用户:", ret.res.currentUser);
 				} else {
 					console.error("加入房间失败:", ret.err);
-					this.handleApiError("加入房间", ret.err);
 				}
 			})
 			.catch((err) => {
 				console.error("加入房间 API 调用异常:", err);
-				this.handleApiError("加入房间", err);
 			});
-	}
-
-	// 退出房间
-	onExitRoom() {
-		if (!this.currentUser) {
-			console.log("请先登录");
-			return;
-		}
-
-		// 检查连接状态并尝试连接
-		this.ensureConnection()
-			.then(() => {
-				this.callExitRoom();
-			})
-			.catch((err) => {
-				console.error("无法建立连接:", err);
-			});
-	}
-
-	// 实际调用退出房间 API
-	private callExitRoom() {
-		this.roomClient
-			.callApi("ExitRoom", {})
-			.then((ret) => {
-				if (ret.isSucc) {
-					console.log("退出房间成功");
-					// 断开与服务器的连接
-					this.roomClient
-						.disconnect()
-						.then(() => {
-							console.log("已断开与服务器的连接");
-						})
-						.catch((err) => {
-							console.error("断开连接失败:", err);
-						});
-				} else {
-					console.error("退出房间失败:", ret.err);
-					this.handleApiError("退出房间", ret.err);
-				}
-			})
-			.catch((err) => {
-				console.error("退出房间 API 调用异常:", err);
-				this.handleApiError("退出房间", err);
-				// 即使API调用失败，也尝试断开连接
-				this.roomClient.disconnect().catch((disconnectErr) => {
-					console.error("强制断开连接失败:", disconnectErr);
-				});
-			});
-	}
-
-	// 统一的错误处理方法
-	private handleApiError(operation: string, error: any) {
-		let errorMessage = `${operation}操作失败: `;
-
-		if (error && error.message) {
-			errorMessage += error.message;
-		} else if (error && typeof error === "string") {
-			errorMessage += error;
-		} else {
-			errorMessage += "未知错误";
-		}
-
-		// 根据错误类型提供不同的处理建议
-		if (error && error.code === "LOST_CONN") {
-			errorMessage += "\n建议：请检查网络连接或重新尝试";
-		} else if (error && error.code === "ROOM_NOT_EXISTS") {
-			errorMessage += "\n建议：请检查房间ID是否正确";
-		} else if (error && error.code === "ALREADY_IN_ROOM") {
-			errorMessage += "\n建议：请先退出当前房间";
-		}
-
-		console.error(errorMessage);
-		// 这里可以添加UI提示，比如显示错误对话框
 	}
 
 	onLogout() {
