@@ -1,6 +1,8 @@
 import { _decorator, Button, Color, Component, instantiate, Label, Layout, Node, ScrollView, Sprite } from "cc";
 import { WsClient } from "tsrpc-browser";
 import { ServiceType as RoomServiceType } from "./shared/protocols/serviceProto_roomServer";
+import { FrameSyncClient, IFrameSyncConnect, InputHandler } from "./shared/services/FrameSyncClient";
+import { MsgAfterFrames, MsgInpFrame, MsgRequireSyncState, MsgSyncFrame, MsgSyncState } from "./shared/types/FrameSync";
 import { RoomData } from "./shared/types/RoomData";
 import { UserInfo } from "./shared/types/UserInfo";
 
@@ -17,13 +19,17 @@ export class RoomTest extends Component {
 	@property(Button) readyButton: Button = null!;
 	@property(Label) readyStatusLabel: Label = null!;
 	@property(Label) userAlreadyReadyLabel: Label = null!;
+	@property(Button) testFrameSyncButton: Button = null!;
 
 	private roomClient: WsClient<RoomServiceType>;
 	private currentRoomData: RoomData | null = null;
 	private currentUser: UserInfo | null = null;
+	// 帧同步客户端
+	private frameSyncClient: FrameSyncClient | null = null;
 
 	start() {
 		this.updateRoomInfo();
+		this.setupFrameSyncTestButton();
 	}
 
 	update(deltaTime: number) {}
@@ -172,6 +178,9 @@ export class RoomTest extends Component {
 	}
 
 	private clearRoomInfo() {
+		// 停止帧同步
+		this.stopFrameSync();
+
 		if (this.roomIdLabel) {
 			this.roomIdLabel.string = "房间ID: 无";
 		}
@@ -449,10 +458,135 @@ export class RoomTest extends Component {
 		this.roomClient = roomClient;
 		this.setupEventListeners();
 		this.updateRoomInfo();
+		this.initFrameSync();
 	}
 
 	// 获取当前房间数据
 	public getCurrentRoom(): RoomData | null {
 		return this.currentRoomData;
+	}
+
+	/**
+	 * 初始化帧同步
+	 */
+	private initFrameSync() {
+		if (!this.roomClient || !this.currentUser) {
+			return;
+		}
+
+		// 创建帧同步连接适配器
+		const frameSyncConnect: IFrameSyncConnect = {
+			onAfterFrames: (msg: MsgAfterFrames) => {
+				console.log("收到追帧数据:", msg);
+			},
+			onSyncFrame: (msg: MsgSyncFrame) => {
+				console.log("收到同步帧:", msg.frameIndex);
+			},
+			onRequireSyncState: (msg: MsgRequireSyncState) => {
+				console.log("请求状态同步:", msg);
+			},
+			sendSyncState: (msg: MsgSyncState) => {
+				// 通过房间客户端发送状态同步数据
+				console.log("发送状态同步数据:", msg);
+				// TODO: 实现状态同步消息发送
+			},
+			sendInpFrame: (msg: MsgInpFrame) => {
+				// 通过房间客户端发送输入帧
+				console.log("发送输入帧:", msg);
+				// TODO: 实现输入帧消息发送
+			},
+			disconnect: () => {
+				console.log("帧同步连接断开");
+			},
+		};
+
+		// 创建输入处理器
+		const inputHandler: InputHandler = {
+			execInput_Move: (connId: string, inputFrame: any, dt: number) => {
+				console.log("执行移动输入:", connId, inputFrame, dt);
+				// 在这里处理移动逻辑
+			},
+			execInput_Attack: (connId: string, inputFrame: any, dt: number) => {
+				console.log("执行攻击输入:", connId, inputFrame, dt);
+				// 在这里处理攻击逻辑
+			},
+		};
+
+		// 创建帧同步客户端
+		this.frameSyncClient = new FrameSyncClient(
+			frameSyncConnect,
+			inputHandler,
+			(stateData: any, stateFrameIndex: number) => {
+				console.log("状态同步数据:", stateData, stateFrameIndex);
+			},
+			(dt: number, frameIndex: number) => {
+				console.log("执行帧:", frameIndex, dt);
+				// 在这里处理每帧的游戏逻辑
+			},
+			() => {
+				// 获取当前游戏状态
+				return {
+					roomData: this.currentRoomData,
+					userData: this.currentUser,
+				};
+			}
+		);
+
+		// 开始执行帧
+		this.frameSyncClient.startExecuteFrame();
+		console.log("帧同步客户端已初始化");
+	}
+
+	/**
+	 * 发送输入操作
+	 */
+	public sendInput(inputType: string, data: any) {
+		if (this.frameSyncClient) {
+			this.frameSyncClient.sendInputFrame({
+				inputType: inputType,
+				...data,
+			});
+		}
+	}
+
+	/**
+	 * 停止帧同步
+	 */
+	private stopFrameSync() {
+		if (this.frameSyncClient) {
+			this.frameSyncClient.stopExecuteFrame();
+			this.frameSyncClient = null;
+			console.log("帧同步已停止");
+		}
+	}
+
+	/**
+	 * 设置帧同步测试按钮
+	 */
+	private setupFrameSyncTestButton() {
+		if (this.testFrameSyncButton) {
+			this.testFrameSyncButton.node.on(Button.EventType.CLICK, () => {
+				this.testFrameSync();
+			});
+		}
+	}
+
+	/**
+	 * 测试帧同步功能
+	 */
+	private testFrameSync() {
+		if (!this.frameSyncClient) {
+			console.log("帧同步客户端未初始化");
+			return;
+		}
+
+		// 发送测试输入
+		this.sendInput("Move", {
+			x: Math.random() * 100,
+			y: Math.random() * 100,
+			timestamp: Date.now(),
+		});
+
+		console.log("已发送测试输入");
 	}
 }

@@ -11,9 +11,11 @@ import { ReqCreateRoom as ReqCreateRoom_1, ResCreateRoom as ResCreateRoom_1 } fr
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
+import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
+import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
 import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
@@ -64,6 +66,10 @@ export interface ServiceType {
             req: ReqSendChat,
             res: ResSendChat
         },
+        "roomServer/SendInput": {
+            req: ReqSendInput,
+            res: ResSendInput
+        },
         "roomServer/SetReady": {
             req: ReqSetReady,
             res: ResSetReady
@@ -86,6 +92,7 @@ export interface ServiceType {
         "roomServer/clientMsg/UserState": MsgUserState,
         "roomServer/serverMsg/Chat": MsgChat,
         "roomServer/serverMsg/OwnerChanged": MsgOwnerChanged,
+        "roomServer/serverMsg/SyncFrame": MsgSyncFrame,
         "roomServer/serverMsg/UserExit": MsgUserExit,
         "roomServer/serverMsg/UserJoin": MsgUserJoin,
         "roomServer/serverMsg/UserReadyChanged": MsgUserReadyChanged,
@@ -94,7 +101,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 31,
+    "version": 32,
     "services": [
         {
             "id": 31,
@@ -183,6 +190,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 36,
+            "name": "roomServer/SendInput",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
             "id": 32,
             "name": "roomServer/SetReady",
             "type": "api"
@@ -195,6 +210,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 33,
             "name": "roomServer/serverMsg/OwnerChanged",
+            "type": "msg"
+        },
+        {
+            "id": 38,
+            "name": "roomServer/serverMsg/SyncFrame",
             "type": "msg"
         },
         {
@@ -1092,6 +1112,52 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "roomServer/PtlSendInput/ReqSendInput": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "operates",
+                    "type": {
+                        "type": "Array",
+                        "elementType": {
+                            "type": "Reference",
+                            "target": "../types/FrameSync/ConnectionInputOperate"
+                        }
+                    }
+                }
+            ]
+        },
+        "../types/FrameSync/ConnectionInputOperate": {
+            "type": "Interface",
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
+                }
+            }
+        },
+        "roomServer/PtlSendInput/ResSendInput": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseResponse"
+                    }
+                }
+            ]
+        },
         "roomServer/PtlSetReady/ReqSetReady": {
             "type": "Interface",
             "properties": [
@@ -1170,6 +1236,15 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 }
             ]
+        },
+        "roomServer/serverMsg/MsgSyncFrame/MsgSyncFrame": {
+            "type": "Interface",
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
+                }
+            }
         },
         "roomServer/serverMsg/MsgUserExit/MsgUserExit": {
             "type": "Interface",

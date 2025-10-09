@@ -1,8 +1,10 @@
 import { PrefixLogger } from "tsrpc";
 import { roomServer } from "../../roomServer";
+import { FrameSyncService } from "../../services/FrameSyncService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
+import { MsgSyncFrame } from "../../shared/types/FrameSync";
 import { RoomData } from "../../shared/types/RoomData";
 import { RoomUserState } from "../../shared/types/RoomUserState";
 import { RoomServerConn } from "../RoomServer";
@@ -14,6 +16,8 @@ export class Room {
 		[uid: string]: RoomUserState;
 	} = {};
 	logger: PrefixLogger;
+	/**帧同步服务*/
+	private frameSyncService: FrameSyncService | null = null;
 
 	constructor(data: RoomData) {
 		this.data = data;
@@ -24,11 +28,11 @@ export class Room {
 		});
 
 		// 每 100ms 同步一次 UserState
-		this._setInterval(() => {
-			this.broadcastMsg("serverMsg/UserStates", {
-				userStates: this.userStates,
-			});
-		}, 100);
+		// this._setInterval(() => {
+		// 	this.broadcastMsg("serverMsg/UserStates", {
+		// 		userStates: this.userStates,
+		// 	});
+		// }, 100);
 	}
 
 	get state(): MsgUpdateRoomState["rooms"][number] {
@@ -133,11 +137,55 @@ export class Room {
 		});
 		this._intervals = [];
 
+		// 停止帧同步
+		if (this.frameSyncService) {
+			this.frameSyncService.stopSyncFrame();
+			this.frameSyncService = null;
+		}
+
 		// 清理房间状态
 		RoomStateService.clearRoomState(this.data.id);
 
 		roomServer.rooms.removeOne((v) => v === this);
 		roomServer.id2Room.delete(this.data.id);
+	}
+
+	/**
+	 * 启动帧同步
+	 */
+	startFrameSync() {
+		if (this.frameSyncService) {
+			return;
+		}
+
+		this.frameSyncService = new FrameSyncService(
+			(msg: MsgSyncFrame) => {
+				// 广播帧数据给房间内所有连接
+				this.broadcastMsg("serverMsg/SyncFrame", msg);
+			},
+			60 // 60fps
+		);
+
+		this.frameSyncService.startSyncFrame();
+		this.logger.log("[FrameSync] 帧同步已启动");
+	}
+
+	/**
+	 * 停止帧同步
+	 */
+	stopFrameSync() {
+		if (this.frameSyncService) {
+			this.frameSyncService.stopSyncFrame();
+			this.frameSyncService = null;
+			this.logger.log("[FrameSync] 帧同步已停止");
+		}
+	}
+
+	/**
+	 * 获取帧同步服务
+	 */
+	getFrameSyncService(): FrameSyncService | null {
+		return this.frameSyncService;
 	}
 
 	private _intervals: ReturnType<typeof setInterval>[] = [];
