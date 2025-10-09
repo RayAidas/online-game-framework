@@ -22,6 +22,8 @@ export class RoomStateService {
 		if (roomId) {
 			this.userToRoom.delete(userId);
 			console.log(`用户 ${userId} 离开房间 ${roomId}`);
+		} else {
+			console.log(`用户 ${userId} 不在任何房间中`);
 		}
 	}
 
@@ -49,5 +51,23 @@ export class RoomStateService {
 				console.log(`清理用户 ${userId} 的房间状态，房间 ${roomId} 已销毁`);
 			}
 		}
+	}
+
+	/**
+	 * 强制清理用户状态（用于处理异常情况）
+	 */
+	static forceClearUserState(userId: number) {
+		const roomId = this.userToRoom.get(userId);
+		if (roomId) {
+			this.userToRoom.delete(userId);
+			console.log(`强制清理用户 ${userId} 的房间状态，原房间 ${roomId}`);
+		}
+	}
+
+	/**
+	 * 获取所有用户状态（用于调试）
+	 */
+	static getAllUserStates(): Map<number, string> {
+		return new Map(this.userToRoom);
 	}
 }

@@ -9,7 +9,17 @@ import { RoomServerConn } from "../RoomServer";
 export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	// 检查用户是否已经在房间中
 	if (call.currentUser && RoomStateService.isUserInRoom(call.currentUser.uid)) {
-		return call.error("您已经在房间中，请先退出当前房间", { code: "ALREADY_IN_ROOM" });
+		const currentRoomId = RoomStateService.getUserRoomId(call.currentUser.uid);
+		console.log(`用户 ${call.currentUser.uid} 尝试加入房间 ${call.req.roomId}，但已在房间 ${currentRoomId} 中`);
+
+		// 检查用户当前房间是否真实存在
+		const currentRoom = roomServer.id2Room.get(currentRoomId!);
+		if (!currentRoom) {
+			console.log(`用户当前房间 ${currentRoomId} 不存在，强制清理用户状态`);
+			RoomStateService.forceClearUserState(call.currentUser.uid);
+		} else {
+			return call.error("您已经在房间中，请先退出当前房间", { code: "ALREADY_IN_ROOM" });
+		}
 	}
 
 	// 创建用户信息

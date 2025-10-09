@@ -16,6 +16,7 @@ export class RoomTest extends Component {
 	@property(Node) userItemTemplate: Node = null!;
 	@property(Button) readyButton: Button = null!;
 	@property(Label) readyStatusLabel: Label = null!;
+	@property(Label) userAlreadyReadyLabel: Label = null!;
 
 	private roomClient: WsClient<RoomServiceType>;
 	private currentRoomData: RoomData | null = null;
@@ -31,25 +32,25 @@ export class RoomTest extends Component {
 		// 监听用户加入
 		this.roomClient.listenMsg("serverMsg/UserJoin", (msg) => {
 			console.log("用户加入:", msg.user);
-			this.updateRoomInfo();
+			this.handleUserJoin(msg);
 		});
 
 		// 监听用户离开
 		this.roomClient.listenMsg("serverMsg/UserExit", (msg) => {
 			console.log("用户离开:", msg.user);
-			this.updateRoomInfo();
+			this.handleUserExit(msg);
 		});
 
 		// 监听房主变更
 		this.roomClient.listenMsg("serverMsg/OwnerChanged", (msg) => {
 			console.log("房主变更:", msg.oldOwner, "->", msg.newOwner);
-			this.updateRoomInfo();
+			this.handleOwnerChanged(msg);
 		});
 
 		// 监听用户准备状态变更
 		this.roomClient.listenMsg("serverMsg/UserReadyChanged", (msg) => {
 			console.log("用户准备状态变更:", msg.user.nickname, "准备状态:", msg.isReady);
-			this.updateRoomInfo();
+			this.handleUserReadyChanged(msg);
 		});
 	}
 
@@ -77,11 +78,31 @@ export class RoomTest extends Component {
 			this.userCountLabel.string = `用户数量: ${this.currentRoomData.users.length}/${this.currentRoomData.maxUser}`;
 		}
 
+		// 更新已准备玩家数量显示
+		this.updateReadyCount();
+
 		// 更新用户列表
 		this.updateUserList();
 
 		// 更新准备状态显示
 		this.updateReadyStatus();
+	}
+
+	private updateReadyCount() {
+		if (!this.currentRoomData) {
+			if (this.userAlreadyReadyLabel) {
+				this.userAlreadyReadyLabel.string = "已准备: 0/0";
+			}
+			return;
+		}
+
+		// 计算已准备的玩家数量
+		const readyCount = this.currentRoomData.users.filter((user) => user.isReady).length;
+		const totalCount = this.currentRoomData.users.length;
+
+		if (this.userAlreadyReadyLabel) {
+			this.userAlreadyReadyLabel.string = `已准备: ${readyCount}/${totalCount}`;
+		}
 	}
 
 	private updateUserList() {
@@ -167,6 +188,10 @@ export class RoomTest extends Component {
 			this.userCountLabel.string = "用户数量: 0/0";
 		}
 
+		if (this.userAlreadyReadyLabel) {
+			this.userAlreadyReadyLabel.string = "已准备: 0/0";
+		}
+
 		// 清空用户列表
 		if (this.userListScrollView) {
 			this.userListScrollView.content.removeAllChildren();
@@ -186,7 +211,6 @@ export class RoomTest extends Component {
 			}
 			return;
 		}
-
 		// 找到当前用户在房间中的信息
 		const currentUserInRoom = this.currentRoomData.users.find((user) => user.id === this.currentUser!.id);
 		const isReady = currentUserInRoom?.isReady || false;
@@ -251,6 +275,8 @@ export class RoomTest extends Component {
 			.then((ret) => {
 				if (ret.isSucc) {
 					console.log(`设置准备状态成功: ${isReady ? "已准备" : "未准备"}`);
+					// 立即更新本地数据
+					this.updateLocalReadyStatus(isReady);
 				} else {
 					console.error("设置准备状态失败:", ret.err);
 				}
@@ -258,6 +284,93 @@ export class RoomTest extends Component {
 			.catch((err) => {
 				console.error("设置准备状态 API 调用异常:", err);
 			});
+	}
+
+	// 更新本地准备状态
+	private updateLocalReadyStatus(isReady: boolean) {
+		if (!this.currentRoomData || !this.currentUser) {
+			return;
+		}
+
+		// 找到当前用户在房间中的信息并更新准备状态
+		const currentUserInRoom = this.currentRoomData.users.find((user) => user.id === this.currentUser!.id);
+		if (currentUserInRoom) {
+			currentUserInRoom.isReady = isReady;
+			console.log(`本地更新用户 ${this.currentUser.id} 准备状态为: ${isReady}`);
+			// 更新UI
+			this.updateReadyCount();
+			this.updateReadyStatus();
+		}
+	}
+
+	// 处理用户加入
+	private handleUserJoin(msg: any) {
+		if (!this.currentRoomData) {
+			return;
+		}
+
+		// 检查用户是否已经存在（避免重复添加）
+		const existingUser = this.currentRoomData.users.find((user) => user.id === msg.user.id);
+		if (!existingUser) {
+			// 添加新用户到房间数据
+			this.currentRoomData.users.push({
+				...msg.user,
+				color: msg.color,
+				isReady: false, // 新用户默认为未准备状态
+			});
+			console.log(`添加用户 ${msg.user.nickname} 到房间数据，当前用户数: ${this.currentRoomData.users.length}`);
+		}
+
+		// 更新UI
+		this.updateRoomInfo();
+	}
+
+	// 处理用户离开
+	private handleUserExit(msg: any) {
+		if (!this.currentRoomData) {
+			return;
+		}
+
+		// 从房间数据中移除用户
+		const userIndex = this.currentRoomData.users.findIndex((user) => user.id === msg.user.id);
+		if (userIndex !== -1) {
+			this.currentRoomData.users.splice(userIndex, 1);
+			console.log(`移除用户 ${msg.user.nickname} 从房间数据，当前用户数: ${this.currentRoomData.users.length}`);
+		}
+
+		// 更新UI
+		this.updateRoomInfo();
+	}
+
+	// 处理房主变更
+	private handleOwnerChanged(msg: any) {
+		if (!this.currentRoomData) {
+			return;
+		}
+
+		// 更新房主ID
+		this.currentRoomData.ownerId = msg.newOwner.id;
+		console.log(`房主变更为: ${msg.newOwner.nickname}`);
+
+		// 更新UI
+		this.updateRoomInfo();
+	}
+
+	// 处理用户准备状态变更
+	private handleUserReadyChanged(msg: any) {
+		if (!this.currentRoomData) {
+			return;
+		}
+
+		// 找到用户并更新准备状态
+		const user = this.currentRoomData.users.find((u) => u.id === msg.user.id);
+		if (user) {
+			user.isReady = msg.isReady;
+			console.log(`用户 ${msg.user.nickname} 准备状态变更为: ${msg.isReady}`);
+		}
+
+		// 更新UI
+		this.updateRoomInfo();
 	}
 	// 确保连接已建立
 	private ensureConnection(): Promise<void> {

@@ -85,7 +85,7 @@ export class RoomServer {
 	createRoom(roomName: string, ownerId?: string): Room {
 		let room = new Room({
 			id: "" + this._nextRoomId++,
-			maxUser: 50,
+			maxUser: 2,
 			name: roomName,
 			users: [],
 			messages: [],

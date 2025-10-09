@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "creator": {
-    "version": "3.8.7"
+    "version": "3.8.5"
   },
   "scripts": {
     "dev": "webpack serve --mode=development --open",
