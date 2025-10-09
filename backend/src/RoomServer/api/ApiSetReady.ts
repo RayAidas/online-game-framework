@@ -1,6 +1,6 @@
 import { ApiCall } from "tsrpc";
-import { RoomServerConn } from "../RoomServer";
 import { ReqSetReady, ResSetReady } from "../../shared/protocols/roomServer/PtlSetReady";
+import { RoomServerConn } from "../RoomServer";
 
 export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 	const conn = call.conn as RoomServerConn;
@@ -29,6 +29,25 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 		});
 
 		console.log(`[ApiSetReady] 用户 ${currentUser.id} 设置准备状态为: ${call.req.isReady}`);
+
+		// 检查是否所有玩家都已准备就绪，如果是则启动帧同步
+		if (call.req.isReady) {
+			const allUsersReady = room.data.users.every((user) => user.isReady === true);
+			if (allUsersReady && room.data.users.length >= room.data.maxUser) {
+				// 至少需要2个玩家才能开始游戏
+				console.log(`[ApiSetReady] 所有玩家已准备就绪，启动帧同步`);
+				room.startFrameSync();
+
+				// 设置游戏开始时间
+				room.data.startMatchTime = Date.now();
+
+				// 广播游戏开始消息
+				room.broadcastMsg("serverMsg/GameStarted", {
+					time: new Date(),
+					message: "游戏开始！",
+				});
+			}
+		}
 	}
 
 	call.succ({ needLogin: true });

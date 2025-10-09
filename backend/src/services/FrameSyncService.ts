@@ -72,10 +72,11 @@ export class FrameSyncService {
 			return;
 		}
 		this._syncing = true;
+		const frameInterval = 1000 / this._syncFrameRate; // 计算每帧间隔
 		this._frameUpdateHD = setInterval(() => {
 			this.syncOneFrame();
-		}, 1000 / this._syncFrameRate);
-		console.log(`帧同步开始，帧率: ${this._syncFrameRate}fps`);
+		}, frameInterval);
+		console.log(`帧同步开始，帧率: ${this._syncFrameRate}fps，间隔: ${frameInterval}ms`);
 	}
 
 	/**

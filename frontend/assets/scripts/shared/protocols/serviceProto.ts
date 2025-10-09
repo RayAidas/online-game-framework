@@ -14,6 +14,7 @@ import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
+import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
@@ -91,6 +92,7 @@ export interface ServiceType {
         "roomServer/clientMsg/UpdateRoomState": MsgUpdateRoomState,
         "roomServer/clientMsg/UserState": MsgUserState,
         "roomServer/serverMsg/Chat": MsgChat,
+        "roomServer/serverMsg/GameStarted": MsgGameStarted,
         "roomServer/serverMsg/OwnerChanged": MsgOwnerChanged,
         "roomServer/serverMsg/SyncFrame": MsgSyncFrame,
         "roomServer/serverMsg/UserExit": MsgUserExit,
@@ -208,12 +210,17 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "type": "msg"
         },
         {
+            "id": 38,
+            "name": "roomServer/serverMsg/GameStarted",
+            "type": "msg"
+        },
+        {
             "id": 33,
             "name": "roomServer/serverMsg/OwnerChanged",
             "type": "msg"
         },
         {
-            "id": 38,
+            "id": 39,
             "name": "roomServer/serverMsg/SyncFrame",
             "type": "msg"
         },
@@ -1203,6 +1210,25 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 2,
                     "name": "content",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "roomServer/serverMsg/MsgGameStarted/MsgGameStarted": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "message",
                     "type": {
                         "type": "String"
                     }
