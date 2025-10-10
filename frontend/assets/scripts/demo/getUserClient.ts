@@ -1,8 +1,7 @@
-import { HttpClient } from "tsrpc-browser";
 import { userManager } from "db://assets/scripts/shared/models/UserManager";
-import { BaseResponse } from "db://assets/scripts/shared/protocols/base";
 import { serviceProto } from "db://assets/scripts/shared/protocols/serviceProto_userServer";
 import { ResLogin } from "db://assets/scripts/shared/protocols/userServer/PtlLogin";
+import { HttpClient } from "../env";
 
 // Create Client
 const client = new HttpClient(serviceProto, {

@@ -1,6 +1,6 @@
-import { HttpClient } from "tsrpc-browser";
 import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { serviceProto } from "db://assets/scripts/shared/protocols/serviceProto_matchServer";
+import { HttpClient } from "../env";
 
 export const getMatchClient = function () {
 	const client = new HttpClient(serviceProto, {

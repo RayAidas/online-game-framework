@@ -7094,8 +7094,6 @@
     },
     "moveSpeed": 200,
     "moveInterval": 50,
-    "enableBoundary": true,
-    "boundary": 400,
     "_id": "6aXLYT5sFFmoE2iNDV6l8H"
   },
   {

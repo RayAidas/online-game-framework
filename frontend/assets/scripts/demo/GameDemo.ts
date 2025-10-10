@@ -1,6 +1,20 @@
 import { _decorator, Color, Component, EventKeyboard, input, Input, instantiate, KeyCode, Node, Prefab, Sprite, Vec3 } from "cc";
 const { ccclass, property } = _decorator;
 
+/**
+ * 游戏演示组件
+ *
+ * 同步机制说明：
+ * 1. 每个客户端看到的自己控制的角色在屏幕下方
+ * 2. 每个客户端看到的其他玩家的角色在屏幕上方
+ * 3. 通过坐标转换实现每个客户端都有"自己在下，敌人在上"的视角
+ *
+ * 坐标系统：
+ * - 服务器坐标：所有玩家都在下方区域（Y < 0）
+ * - 当前玩家：直接使用服务器坐标（Y < 0，在下方）
+ * - 其他玩家：通过坐标转换 Y = -position.y + 200（Y > 0，在上方）
+ * - 初始位置：所有玩家都从 Y = -200 开始，其他玩家立即转换到上方
+ */
 @ccclass("GameDemo")
 export class GameDemo extends Component {
 	@property(Prefab) playerPrefab: Prefab = null!;
@@ -8,10 +22,6 @@ export class GameDemo extends Component {
 	moveSpeed: number = 200;
 	@property({ tooltip: "移动输入发送间隔（毫秒）" })
 	moveInterval: number = 50;
-	@property({ tooltip: "是否限制移动边界" })
-	enableBoundary: boolean = true;
-	@property({ tooltip: "移动边界（像素）" })
-	boundary: number = 400;
 
 	public currentPlayer: Node = null!;
 	private players: Map<string, Node> = new Map();
@@ -50,13 +60,28 @@ export class GameDemo extends Component {
 	 * 发送移动输入到服务器
 	 */
 	private sendMoveInput(position: Vec3) {
+		// 将当前玩家的位置转换为服务器坐标
+		// 当前玩家在下方，但服务器需要知道真实位置
+		const serverPosition = this.transformPositionForServer(position);
+
 		// 通过事件系统发送输入到RoomPanel
 		this.node.emit("playerMove", {
 			inputType: "Move",
-			x: position.x,
-			y: position.y,
+			x: serverPosition.x,
+			y: serverPosition.y,
 			timestamp: Date.now(),
 		});
+	}
+
+	/**
+	 * 将客户端显示坐标转换为服务器坐标
+	 * @param displayPosition 客户端显示位置
+	 * @returns 服务器坐标
+	 */
+	private transformPositionForServer(displayPosition: Vec3): Vec3 {
+		// 当前玩家在下方，服务器需要知道真实位置
+		// 这里可以根据游戏逻辑调整转换规则
+		return new Vec3(displayPosition.x, displayPosition.y, displayPosition.z);
 	}
 
 	/**
@@ -90,8 +115,16 @@ export class GameDemo extends Component {
 			playerNode.setScale(0.5, 0.5, 1);
 		}
 
-		// 设置玩家位置
-		playerNode.setPosition(0, 0, 0);
+		// 根据是否为当前玩家设置初始位置
+		// 所有玩家都从下方开始，其他玩家通过坐标转换显示在上方
+		const initialY = -200; // 所有玩家都从下方开始
+		playerNode.setPosition(0, initialY, 0);
+
+		// 如果不是当前玩家，立即应用坐标转换显示在上方
+		if (!isCurrentPlayer) {
+			const transformedPos = this.transformPositionForDisplay(playerId, new Vec3(0, initialY, 0));
+			playerNode.setPosition(transformedPos);
+		}
 
 		// 添加到玩家容器
 		this.node.addChild(playerNode);
@@ -129,11 +162,39 @@ export class GameDemo extends Component {
 	public updatePlayerPosition(playerId: string, position: Vec3) {
 		const playerNode = this.players.get(playerId);
 		if (playerNode) {
-			playerNode.setPosition(position);
-			console.log(`GameDemo: 更新玩家 ${playerId} 位置到 (${position.x}, ${position.y})`);
+			// 应用坐标转换：每个客户端看到的其他玩家都在上方
+			const transformedPosition = this.transformPositionForDisplay(playerId, position);
+			playerNode.setPosition(transformedPosition);
+			console.log(`GameDemo: 更新玩家 ${playerId} 位置到 (${transformedPosition.x}, ${transformedPosition.y})`);
 		} else {
 			console.log(`GameDemo: 找不到玩家 ${playerId}，当前玩家列表:`, Array.from(this.players.keys()));
 		}
+	}
+
+	/**
+	 * 坐标转换：确保每个客户端看到的其他玩家都在屏幕上方
+	 * @param playerId 玩家ID
+	 * @param position 原始位置
+	 * @returns 转换后的位置
+	 */
+	private transformPositionForDisplay(playerId: string, position: Vec3): Vec3 {
+		// 如果这是当前玩家，直接返回原位置（当前玩家在下方）
+		if (this.currentPlayer && this.players.get(playerId) === this.currentPlayer) {
+			return position;
+		}
+
+		// 对于其他玩家，将Y坐标转换到屏幕上方
+		// 服务器坐标：当前玩家的真实位置在下方（Y < 0）
+		// 客户端显示：其他玩家在上方（Y > 0）
+		// 转换规则：将下方坐标转换为上方坐标，保持与初始位置一致
+		let displayY = position.y;
+
+		// 将下方坐标转换为上方坐标
+		// 使用简单的镜像转换：Y = -position.y + 200
+		// 这样 -200 变成 400，-100 变成 300，-300 变成 500
+		displayY = -position.y + 200;
+
+		return new Vec3(position.x, displayY, position.z);
 	}
 
 	/**
@@ -238,28 +299,6 @@ export class GameDemo extends Component {
 
 		// 如果有移动，更新位置并发送输入
 		if (hasMoved) {
-			// 应用边界限制
-			if (this.enableBoundary) {
-				const oldX = newPos.x;
-				const oldY = newPos.y;
-				newPos.x = Math.max(-this.boundary, Math.min(this.boundary, newPos.x));
-				newPos.y = Math.max(-this.boundary, Math.min(this.boundary, newPos.y));
-
-				// 如果位置被边界限制，停止该方向的移动
-				if (oldX !== newPos.x) {
-					this.pressedKeys.delete(KeyCode.ARROW_LEFT);
-					this.pressedKeys.delete(KeyCode.KEY_A);
-					this.pressedKeys.delete(KeyCode.ARROW_RIGHT);
-					this.pressedKeys.delete(KeyCode.KEY_D);
-				}
-				if (oldY !== newPos.y) {
-					this.pressedKeys.delete(KeyCode.ARROW_UP);
-					this.pressedKeys.delete(KeyCode.KEY_W);
-					this.pressedKeys.delete(KeyCode.ARROW_DOWN);
-					this.pressedKeys.delete(KeyCode.KEY_S);
-				}
-			}
-
 			this.currentPlayer.setPosition(newPos);
 			this.sendMoveInput(newPos);
 			this.lastMoveTime = currentTime;

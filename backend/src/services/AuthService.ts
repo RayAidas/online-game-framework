@@ -94,6 +94,9 @@ export class AuthService {
 				};
 			}
 
+			// 清除该用户的所有旧 token（单点登录）
+			await TokenService.clearUserTokens(user.uid);
+
 			// 延长 SSO Token 有效期
 			const newToken = await TokenService.createSsoToken(user.uid);
 
