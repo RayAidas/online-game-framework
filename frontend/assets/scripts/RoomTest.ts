@@ -1,6 +1,7 @@
-import { _decorator, Button, Component, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, Vec3 } from "cc";
+import { _decorator, Button, Color, Component, EditBox, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, UITransform, Vec3 } from "cc";
 import { WsClient } from "tsrpc-browser";
 import { GameTest } from "./GameTest";
+import { MsgChat } from "./shared/protocols/roomServer/serverMsg/MsgChat";
 import { ServiceType as RoomServiceType } from "./shared/protocols/serviceProto_roomServer";
 import { FrameSyncClient, IFrameSyncConnect, InputHandler } from "./shared/services/FrameSyncClient";
 import { MsgAfterFrames, MsgInpFrame, MsgRequireSyncState, MsgSyncFrame, MsgSyncState } from "./shared/types/FrameSync";
@@ -21,6 +22,9 @@ export class RoomTest extends Component {
 	@property(Label) readyStatusLabel: Label = null!;
 	@property(Label) userAlreadyReadyLabel: Label = null!;
 	@property(GameTest) gameTest: GameTest = null!;
+	@property(ScrollView) chatListScrollView: ScrollView = null!;
+	@property(Prefab) chatItemTemplate: Prefab = null!;
+	@property(EditBox) chatInput: EditBox = null!;
 
 	private roomClient: WsClient<RoomServiceType>;
 	private currentRoomData: RoomData | null = null;
@@ -69,6 +73,11 @@ export class RoomTest extends Component {
 		this.roomClient.listenMsg("serverMsg/SyncFrame", (msg) => {
 			console.log("收到帧同步数据:", msg.frameIndex);
 			this.handleSyncFrame(msg);
+		});
+
+		this.roomClient.listenMsg("serverMsg/Chat", (msg) => {
+			console.log("收到聊天消息:", msg.content);
+			this.handleChat(msg);
 		});
 	}
 
@@ -613,6 +622,41 @@ export class RoomTest extends Component {
 					}
 				});
 			});
+		}
+	}
+
+	private handleChat(msg: MsgChat) {
+		console.log("收到聊天消息:", msg);
+		let item = this.createChatItem(msg);
+		this.chatListScrollView.content.addChild(item);
+		item.setPosition(0, -(this.chatListScrollView.content.children.length - 1) * 100, 0);
+		this.chatListScrollView.content.getComponent(UITransform).height = this.chatListScrollView.content.children.length * 100;
+		if (this.chatListScrollView.content.getComponent(UITransform).height > this.chatListScrollView.node.getComponent(UITransform).height) {
+			this.chatListScrollView.scrollToBottom(0);
+		}
+	}
+
+	private createChatItem(msg: any): Node {
+		const chatItem = instantiate(this.chatItemTemplate);
+		let nameLabel = chatItem.getChildByName("name").getComponent(Label);
+
+		// 从当前房间用户列表中找到发送消息的用户
+		const user = this.currentRoomData?.users.find((u) => u.id === msg.user.id);
+		if (user) {
+			nameLabel.color = new Color(user.color.r, user.color.g, user.color.b, 255);
+		}
+
+		nameLabel.string = msg.user.nickname;
+		chatItem.getChildByName("content").getComponent(Label).string = msg.content;
+		chatItem.getChildByName("time").getComponent(Label).string = msg.time.toLocaleString();
+		return chatItem;
+	}
+
+	public sendChatMessage() {
+		const content = this.chatInput.string;
+		if (content) {
+			this.roomClient.callApi("SendChat", { content });
+			this.chatInput.string = "";
 		}
 	}
 }

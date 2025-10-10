@@ -12,6 +12,7 @@ const { ccclass, property } = _decorator;
 @ccclass("MatchTest")
 export class MatchTest extends Component {
 	@property(EditBox) roomId: EditBox = null!;
+	@property(EditBox) roomName: EditBox = null!;
 	@property(RoomTest) roomTest: RoomTest = null!;
 
 	matchClient: HttpClient<MatchServiceType>;
@@ -74,7 +75,7 @@ export class MatchTest extends Component {
 
 		this.matchClient
 			.callApi("CreateRoom", {
-				roomName: "TestRoom",
+				roomName: this.roomName.string || `${this.currentUser.username}的房间`,
 			})
 			.then((ret) => {
 				if (ret.isSucc) {
