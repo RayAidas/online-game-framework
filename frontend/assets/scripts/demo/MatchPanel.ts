@@ -1,19 +1,19 @@
 import { _decorator, Component, EditBox } from "cc";
+import { CurrentUser } from "db://assets/scripts/shared/models/CurrentUser";
+import { userManager } from "db://assets/scripts/shared/models/UserManager";
+import { ServiceType as MatchServiceType } from "db://assets/scripts/shared/protocols/serviceProto_matchServer";
+import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { HttpClient, WsClient } from "tsrpc-browser";
 import { getMatchClient } from "./getMatchClient";
 import { getRoomClient } from "./getRoomClient";
-import { RoomTest } from "./RoomTest";
-import { CurrentUser } from "./shared/models/CurrentUser";
-import { userManager } from "./shared/models/UserManager";
-import { ServiceType as MatchServiceType } from "./shared/protocols/serviceProto_matchServer";
-import { ServiceType as RoomServiceType } from "./shared/protocols/serviceProto_roomServer";
+import { RoomPanel } from "./RoomPanel";
 const { ccclass, property } = _decorator;
 
-@ccclass("MatchTest")
-export class MatchTest extends Component {
+@ccclass("MatchPanel")
+export class MatchPanel extends Component {
 	@property(EditBox) roomId: EditBox = null!;
 	@property(EditBox) roomName: EditBox = null!;
-	@property(RoomTest) roomTest: RoomTest = null!;
+	@property(RoomPanel) roomPanel: RoomPanel = null!;
 
 	matchClient: HttpClient<MatchServiceType>;
 	roomClient: WsClient<RoomServiceType>;
@@ -159,8 +159,8 @@ export class MatchTest extends Component {
 			})
 			.then((ret) => {
 				if (ret.isSucc) {
-					this.roomTest.node.active = true;
-					this.roomTest.setCurrentRoom(ret.res.roomData, ret.res.currentUser, this.roomClient);
+					this.roomPanel.node.active = true;
+					this.roomPanel.setCurrentRoom(ret.res.roomData, ret.res.currentUser, this.roomClient);
 					console.log("加入房间成功:", ret.res);
 					console.log("房间数据:", ret.res.roomData);
 					console.log("当前用户:", ret.res.currentUser);

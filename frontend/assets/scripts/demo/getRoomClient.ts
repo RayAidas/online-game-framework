@@ -1,6 +1,6 @@
 import { WsClient } from "tsrpc-browser";
-import { userManager } from "./shared/models/UserManager";
-import { serviceProto } from "./shared/protocols/serviceProto_roomServer";
+import { userManager } from "db://assets/scripts/shared/models/UserManager";
+import { serviceProto } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 
 export const getRoomClient = function () {
 	const client = new WsClient(serviceProto, {

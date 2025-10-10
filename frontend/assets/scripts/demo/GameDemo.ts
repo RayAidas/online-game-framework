@@ -1,8 +1,8 @@
 import { _decorator, Color, Component, EventKeyboard, input, Input, instantiate, KeyCode, Node, Prefab, Sprite, Vec3 } from "cc";
 const { ccclass, property } = _decorator;
 
-@ccclass("GameTest")
-export class GameTest extends Component {
+@ccclass("GameDemo")
+export class GameDemo extends Component {
 	@property(Prefab) playerPrefab: Prefab = null!;
 	@property({ tooltip: "移动速度（像素/秒）" })
 	moveSpeed: number = 200;
@@ -50,7 +50,7 @@ export class GameTest extends Component {
 	 * 发送移动输入到服务器
 	 */
 	private sendMoveInput(position: Vec3) {
-		// 通过事件系统发送输入到RoomTest
+		// 通过事件系统发送输入到RoomPanel
 		this.node.emit("playerMove", {
 			inputType: "Move",
 			x: position.x,
@@ -130,9 +130,9 @@ export class GameTest extends Component {
 		const playerNode = this.players.get(playerId);
 		if (playerNode) {
 			playerNode.setPosition(position);
-			console.log(`GameTest: 更新玩家 ${playerId} 位置到 (${position.x}, ${position.y})`);
+			console.log(`GameDemo: 更新玩家 ${playerId} 位置到 (${position.x}, ${position.y})`);
 		} else {
-			console.log(`GameTest: 找不到玩家 ${playerId}，当前玩家列表:`, Array.from(this.players.keys()));
+			console.log(`GameDemo: 找不到玩家 ${playerId}，当前玩家列表:`, Array.from(this.players.keys()));
 		}
 	}
 

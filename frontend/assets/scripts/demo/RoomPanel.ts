@@ -1,17 +1,17 @@
 import { _decorator, Button, Color, Component, EditBox, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, UITransform, Vec3 } from "cc";
+import { MsgChat } from "db://assets/scripts/shared/protocols/roomServer/serverMsg/MsgChat";
+import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
+import { FrameSyncClient, IFrameSyncConnect, InputHandler } from "db://assets/scripts/shared/services/FrameSyncClient";
+import { MsgAfterFrames, MsgInpFrame, MsgRequireSyncState, MsgSyncFrame, MsgSyncState } from "db://assets/scripts/shared/types/FrameSync";
+import { RoomData } from "db://assets/scripts/shared/types/RoomData";
+import { UserInfo } from "db://assets/scripts/shared/types/UserInfo";
 import { WsClient } from "tsrpc-browser";
-import { GameTest } from "./GameTest";
-import { MsgChat } from "./shared/protocols/roomServer/serverMsg/MsgChat";
-import { ServiceType as RoomServiceType } from "./shared/protocols/serviceProto_roomServer";
-import { FrameSyncClient, IFrameSyncConnect, InputHandler } from "./shared/services/FrameSyncClient";
-import { MsgAfterFrames, MsgInpFrame, MsgRequireSyncState, MsgSyncFrame, MsgSyncState } from "./shared/types/FrameSync";
-import { RoomData } from "./shared/types/RoomData";
-import { UserInfo } from "./shared/types/UserInfo";
+import { GameDemo } from "./GameDemo";
 
 const { ccclass, property } = _decorator;
 
-@ccclass("RoomTest")
-export class RoomTest extends Component {
+@ccclass("RoomPanel")
+export class RoomPanel extends Component {
 	@property(Label) roomIdLabel: Label = null!;
 	@property(Label) roomNameLabel: Label = null!;
 	@property(Label) ownerLabel: Label = null!;
@@ -21,7 +21,7 @@ export class RoomTest extends Component {
 	@property(Button) readyButton: Button = null!;
 	@property(Label) readyStatusLabel: Label = null!;
 	@property(Label) userAlreadyReadyLabel: Label = null!;
-	@property(GameTest) gameTest: GameTest = null!;
+	@property(GameDemo) gameDemo: GameDemo = null!;
 	@property(ScrollView) chatListScrollView: ScrollView = null!;
 	@property(Prefab) chatItemTemplate: Prefab = null!;
 	@property(EditBox) chatInput: EditBox = null!;
@@ -131,7 +131,7 @@ export class RoomTest extends Component {
 			this.userAlreadyReadyLabel.string = `已准备: ${readyCount}/${totalCount}`;
 		}
 		if (readyCount == this.currentRoomData.maxUser) {
-			this.gameTest.node.active = true;
+			this.gameDemo.node.active = true;
 		}
 	}
 
@@ -580,17 +580,17 @@ export class RoomTest extends Component {
 	 * 处理游戏开始消息
 	 */
 	private handleGameStarted(msg: any) {
-		if (this.gameTest) {
+		if (this.gameDemo) {
 			// 为房间内所有用户创建玩家节点
 			if (this.currentRoomData && this.currentUser) {
 				this.currentRoomData.users.forEach((user) => {
 					const isCurrentPlayer = user.id === this.currentUser!.id;
-					this.gameTest.createPlayer(user.id, isCurrentPlayer, user.color);
+					this.gameDemo.createPlayer(user.id, isCurrentPlayer, user.color);
 				});
 			}
 
-			// 监听GameTest的玩家移动事件
-			this.gameTest.node.on("playerMove", (inputData: any) => {
+			// 监听GameDemo的玩家移动事件
+			this.gameDemo.node.on("playerMove", (inputData: any) => {
 				this.sendInput(inputData.inputType, {
 					x: inputData.x,
 					y: inputData.y,
@@ -617,7 +617,7 @@ export class RoomTest extends Component {
 				connectionInput.operates.forEach((operate: any) => {
 					if (operate.inputType === "Move") {
 						// 更新其他玩家位置
-						this.gameTest.updatePlayerPosition(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
+						this.gameDemo.updatePlayerPosition(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
 						console.log(`更新玩家 ${connectionInput.connectionId} 位置: (${operate.x}, ${operate.y})`);
 					}
 				});

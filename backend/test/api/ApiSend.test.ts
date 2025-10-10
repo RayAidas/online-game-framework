@@ -18,14 +18,14 @@ describe('ApiSend', function () {
     })
 
     it('Success', async function () {
-        let ret = await client.callApi('Send', {
+        let ret = await client.callApi('roomServer/SendChat', {
             content: 'Test'
         });
         assert.ok(ret.isSucc)
     });
 
     it('Check content is empty', async function () {
-        let ret = await client.callApi('Send', {
+        let ret = await client.callApi('roomServer/SendChat', {
             content: ''
         });
         assert.deepStrictEqual(ret, {

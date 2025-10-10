@@ -1,7 +1,7 @@
 [
   {
     "__type__": "cc.SceneAsset",
-    "_name": "main",
+    "_name": "demo",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_native": "",
@@ -11,7 +11,7 @@
   },
   {
     "__type__": "cc.Scene",
-    "_name": "main",
+    "_name": "demo",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": null,
@@ -282,7 +282,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Button",
+    "_name": "loginBtn",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -608,7 +608,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "Button-001",
+    "_name": "registerBtn",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -934,7 +934,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "EditBox-001",
+    "_name": "userName",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -1349,7 +1349,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "EditBox",
+    "_name": "password",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -3333,7 +3333,7 @@
     "roomName": {
       "__id__": 63
     },
-    "roomTest": {
+    "roomPanel": {
       "__id__": 82
     },
     "_id": "72XcTajfBDYYlStozsCcA9"
@@ -3376,7 +3376,7 @@
     "userAlreadyReadyLabel": {
       "__id__": 120
     },
-    "gameTest": {
+    "gameDemo": {
       "__id__": 178
     },
     "chatListScrollView": {
@@ -7042,9 +7042,9 @@
     "_dstBlendFactor": 4,
     "_color": {
       "__type__": "cc.Color",
-      "r": 215,
-      "g": 255,
-      "b": 195,
+      "r": 181,
+      "g": 247,
+      "b": 231,
       "a": 255
     },
     "_spriteFrame": {

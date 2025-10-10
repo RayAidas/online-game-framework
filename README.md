@@ -59,11 +59,23 @@
 ### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone git@github.com:RayAidas/online-game-framework.git
 cd online-game-framework
 ```
 
-### 2. 启动数据库服务
+### 2. 安装依赖
+
+```bash
+# 安装后端依赖
+cd backend
+npm install
+
+# 安装前端依赖
+cd ../frontend
+npm install
+```
+
+### 3. 启动数据库服务
 
 ```bash
 # 启动 Redis 和 MySQL 服务
@@ -74,21 +86,30 @@ cd backend
 docker-compose up -d
 ```
 
-### 3. 启动后端服务
+### 4. 启动后端服务
+
+#### 分别启动各个服务
 
 ```bash
 cd backend
-npm install
-npm run dev
+
+# 启动用户服务
+npm run dev:user
+
+# 启动匹配服务
+npm run dev:match
+
+# 启动房间服务
+npm run dev:room
 ```
 
 后端服务将在以下端口启动：
 
--   用户服务: http://localhost:3001
--   匹配服务: http://localhost:3004
--   房间服务: http://localhost:3005
+-   **用户服务**: http://localhost:3003
+-   **匹配服务**: http://localhost:3004
+-   **房间服务**: http://localhost:3001
 
-### 4. 启动前端游戏
+### 5. 启动前端游戏
 
 1. 使用 Cocos Creator 打开 `frontend` 目录
 2. 在编辑器中运行项目
@@ -111,7 +132,7 @@ npm run dev
 ```
 backend/
 ├── src/
-│   ├── UserServer/          # 用户服务
+│   ├── UserServer/         # 用户服务
 │   │   ├── api/            # 用户相关API
 │   │   └── UserServer.ts   # 用户服务主类
 │   ├── MatchServer/        # 匹配服务
@@ -143,17 +164,36 @@ backend/
 ```
 frontend/
 ├── assets/
-│   └── scripts/
-│       ├── LoginPanel.ts      # 登录界面
-│       ├── MatchTest.ts       # 匹配测试
-│       ├── RoomTest.ts        # 房间管理
-│       ├── GameTest.ts        # 游戏逻辑
-│       └── shared/            # 共享代码
-│           ├── protocols/     # 协议定义
-│           ├── services/      # 服务类
-│           └── types/         # 类型定义
-├── library/                   # Cocos Creator资源
-└── settings/                  # 项目设置
+│   ├── demo.scene           # demo场景
+│   ├── resources/           # 游戏资源
+│   │   └── demo/            # 演示资源
+│   └── scripts/             # 脚本文件
+│       ├── demo/            # 演示组件
+│       │   ├── GameDemo.ts      # 游戏演示
+│       │   ├── LoginPanel.ts    # 登录界面
+│       │   ├── MatchPanel.ts    # 匹配界面
+│       │   ├── RoomPanel.ts     # 房间界面
+│       │   └── get*Client.ts    # 客户端连接器
+│       └── shared/          # 共享代码
+│           ├── models/      # 数据模型
+│           │   ├── CurrentUser.ts    # 当前用户
+│           │   └── UserManager.ts    # 用户管理
+│           ├── protocols/   # 协议定义
+│           │   ├── userServer/       # 用户服务协议
+│           │   ├── matchServer/      # 匹配服务协议
+│           │   ├── roomServer/       # 房间服务协议
+│           │   └── serviceProto*.ts  # 服务协议汇总
+│           ├── services/    # 服务类
+│           │   └── FrameSyncClient.ts # 帧同步客户端
+│           └── types/       # 类型定义
+│               ├── FrameSync.ts      # 帧同步类型
+│               ├── RoomData.ts       # 房间数据
+│               ├── RoomUserState.ts  # 房间用户状态
+│               └── UserInfo.ts       # 用户信息
+├── library/                 # Cocos Creator资源库
+├── settings/                # 项目设置
+├── temp/                    # 临时文件
+└── preview-template/        # 预览模板
 ```
 
 ## 🎮 游戏功能详解
@@ -174,7 +214,7 @@ frontend/
 1. **发送输入**:
 
 ```typescript
-// 在 GameTest 中
+// 在 GameDemo 中
 this.sendInput("Move", {
 	x: 100,
 	y: 200,
@@ -252,7 +292,7 @@ const inputHandler: InputHandler = {
 
 #### 添加新的游戏功能
 
-1. 在 `GameTest.ts` 中添加游戏逻辑
+1. 在 `GameDemo.ts` 中添加游戏逻辑
 2. 实现输入处理
 3. 更新 UI 界面
 4. 处理网络消息
@@ -316,9 +356,9 @@ REDIS_PASSWORD=
 REDIS_DB=0
 
 # 服务端口
-USER_SERVER_PORT=3001
-MATCH_SERVER_PORT=3004
-ROOM_SERVER_PORT=3005
+MATCH_PORT=3004
+ROOM_PROT=3001
+USER_PORT=3003
 ```
 
 ### Docker 配置

@@ -37,8 +37,8 @@
     - 位置: `frontend/assets/scripts/shared/services/FrameSyncClient.ts`
     - 处理服务端帧数据，执行游戏逻辑
 
-2. **RoomTest 集成**: 房间页面集成帧同步
-    - 位置: `frontend/assets/scripts/RoomTest.ts`
+2. **RoomPanel 集成**: 房间页面集成帧同步
+    - 位置: `frontend/assets/scripts/RoomPanel.ts`
     - 自动初始化和管理帧同步客户端
 
 ## 使用方法
@@ -48,7 +48,7 @@
 在客户端代码中，可以通过以下方式发送输入：
 
 ```typescript
-// 在 RoomTest 组件中
+// 在 RoomPanel 组件中
 this.sendInput("Move", {
 	x: 100,
 	y: 200,
@@ -63,7 +63,7 @@ this.sendInput("Attack", {
 
 ### 2. 处理输入操作
 
-在 `RoomTest.ts` 的 `initFrameSync()` 方法中，可以自定义输入处理器：
+在 `RoomPanel.ts` 的 `initFrameSync()` 方法中，可以自定义输入处理器：
 
 ```typescript
 const inputHandler: InputHandler = {
@@ -154,5 +154,5 @@ const inputHandler: InputHandler = {
 
 -   服务端帧同步: `backend/src/services/FrameSyncService.ts`
 -   客户端帧同步: `frontend/assets/scripts/shared/services/FrameSyncClient.ts`
--   房间集成: `frontend/assets/scripts/RoomTest.ts`
+-   房间集成: `frontend/assets/scripts/RoomPanel.ts`
 -   类型定义: `backend/src/shared/types/FrameSync.ts` 和 `frontend/assets/scripts/shared/types/FrameSync.ts`
