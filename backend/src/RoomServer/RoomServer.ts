@@ -81,7 +81,7 @@ export class RoomServer {
 	private _isJoiningMatchServer?: boolean;
 	matchServerConn?: RoomServerConn;
 
-	private _nextRoomId = 1;
+	private _nextRoomId = 10000;
 	createRoom(roomName: string, ownerId?: string): Room {
 		let room = new Room({
 			id: "" + this._nextRoomId++,

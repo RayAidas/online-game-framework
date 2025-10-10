@@ -62,19 +62,29 @@ export class GameTest extends Component {
 	/**
 	 * 创建玩家节点
 	 */
-	public createPlayer(playerId: string, isCurrentPlayer: boolean = false): Node {
+	public createPlayer(playerId: string, isCurrentPlayer: boolean = false, color?: { r: number; g: number; b: number }): Node {
 		let playerNode: Node;
 
 		if (this.playerPrefab) {
 			// 使用预制体创建玩家
 			playerNode = instantiate(this.playerPrefab);
+			const sprite = playerNode.getComponent(Sprite);
+			if (sprite) {
+				sprite.color = new Color(color.r, color.g, color.b, 255);
+			}
 		} else {
 			// 创建简单的玩家节点
 			playerNode = new Node(`Player_${playerId}`);
 
 			// 添加精灵组件
 			const sprite = playerNode.addComponent(Sprite);
-			sprite.color = isCurrentPlayer ? Color.RED : Color.BLUE;
+
+			// 使用服务器生成的颜色，如果没有则使用默认颜色
+			if (color) {
+				sprite.color = new Color(color.r, color.g, color.b, 255);
+			} else {
+				sprite.color = isCurrentPlayer ? Color.RED : Color.BLUE;
+			}
 
 			// 设置玩家大小
 			playerNode.setScale(0.5, 0.5, 1);

@@ -2,6 +2,7 @@ import { ApiCall, HttpClient } from "tsrpc";
 import { RoomStateService } from "../../services/RoomStateService";
 import { ReqExitRoom, ResExitRoom } from "../../shared/protocols/roomServer/PtlExitRoom";
 import { serviceProto as serviceProto_matchServer } from "../../shared/protocols/serviceProto_matchServer";
+import { ColorGenerator } from "../../utils/ColorGenerator";
 import { RoomServerConn } from "../RoomServer";
 
 export async function ApiExitRoom(call: ApiCall<ReqExitRoom, ResExitRoom>) {
@@ -45,6 +46,15 @@ export async function ApiExitRoom(call: ApiCall<ReqExitRoom, ResExitRoom>) {
 	}
 
 	if (conn.currentRoom) {
+		// 在用户离开前，释放其颜色
+		if (conn.currentUser) {
+			const user = conn.currentRoom.data.users.find((u) => u.id === conn.currentUser!.id);
+			if (user && user.color) {
+				ColorGenerator.releaseColor(user.color);
+				console.log(`释放用户 ${conn.currentUser.nickname} 的颜色: RGB(${user.color.r}, ${user.color.g}, ${user.color.b})`);
+			}
+		}
+
 		conn.currentRoom.leave(conn);
 	}
 

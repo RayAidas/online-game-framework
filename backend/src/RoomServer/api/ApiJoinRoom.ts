@@ -4,6 +4,7 @@ import { roomServer } from "../../roomServer";
 import { RoomStateService } from "../../services/RoomStateService";
 import { ReqJoinRoom, ResJoinRoom } from "../../shared/protocols/roomServer/PtlJoinRoom";
 import { UserInfo } from "../../shared/types/UserInfo";
+import { ColorGenerator } from "../../utils/ColorGenerator";
 import { RoomServerConn } from "../RoomServer";
 
 export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
@@ -27,11 +28,10 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 		id: call.currentUser ? call.currentUser.uid.toString() : uuid.v4(),
 		nickname: call.req.nickname,
 	};
-	const userColor = {
-		r: (Math.random() * 256) | 0,
-		g: (Math.random() * 256) | 0,
-		b: (Math.random() * 256) | 0,
-	};
+
+	// 使用颜色生成器生成用户颜色
+	const userColor = ColorGenerator.generateUserColor();
+	console.log(`为用户 ${currentUser.nickname} 生成颜色: RGB(${userColor.r}, ${userColor.g}, ${userColor.b})`);
 	const conn = call.conn as RoomServerConn;
 	conn.currentUser = currentUser;
 

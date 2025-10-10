@@ -1,4 +1,4 @@
-import { _decorator, Button, Color, Component, instantiate, Label, Layout, Node, ScrollView, Sprite, Vec3 } from "cc";
+import { _decorator, Button, Component, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, Vec3 } from "cc";
 import { WsClient } from "tsrpc-browser";
 import { GameTest } from "./GameTest";
 import { ServiceType as RoomServiceType } from "./shared/protocols/serviceProto_roomServer";
@@ -16,7 +16,7 @@ export class RoomTest extends Component {
 	@property(Label) ownerLabel: Label = null!;
 	@property(Label) userCountLabel: Label = null!;
 	@property(ScrollView) userListScrollView: ScrollView = null!;
-	@property(Node) userItemTemplate: Node = null!;
+	@property(Prefab) userItemTemplate: Prefab = null!;
 	@property(Button) readyButton: Button = null!;
 	@property(Label) readyStatusLabel: Label = null!;
 	@property(Label) userAlreadyReadyLabel: Label = null!;
@@ -151,43 +151,35 @@ export class RoomTest extends Component {
 
 	private createUserItem(user: UserInfo & { color: { r: number; g: number; b: number } }, index: number): Node {
 		const userItem = instantiate(this.userItemTemplate);
-
-		// 设置用户信息
-		const nameLabel = userItem.getChildByName("NameLabel")?.getComponent(Label);
+		const nameLabel = userItem.getComponent(RichText);
 		if (nameLabel) {
-			nameLabel.string = user.nickname;
-			// 如果是房主，添加标识
+			let richText = "";
+
+			// 添加房主标识
 			if (user.id === this.currentRoomData?.ownerId) {
-				nameLabel.string = `👑 ${user.nickname}`;
-				nameLabel.color = new Color(255, 215, 0); // 金色
+				richText += "<color=#FFD700>👑</color> ";
 			}
-		}
 
-		const idLabel = userItem.getChildByName("IdLabel")?.getComponent(Label);
-		if (idLabel) {
-			idLabel.string = `ID: ${user.id}`;
-		}
+			// 添加当前用户标识
+			if (user.id === this.currentUser?.id) {
+				richText += "<color=#00FF00>★</color> ";
+			}
 
-		// 设置准备状态
-		const readyLabel = userItem.getChildByName("ReadyLabel")?.getComponent(Label);
-		if (readyLabel) {
+			// 添加用户名(带颜色)
+			const colorHex = `${user.color.r.toString(16).padStart(2, "0")}${user.color.g.toString(16).padStart(2, "0")}${user.color.b
+				.toString(16)
+				.padStart(2, "0")}`;
+			richText += `<color=#${colorHex}>${user.nickname}</color>`;
+
+			// 添加准备状态
 			const isReady = user.isReady || false;
-			readyLabel.string = isReady ? "✅ 已准备" : "❌ 未准备";
-			readyLabel.color = isReady ? new Color(0, 255, 0) : new Color(255, 0, 0);
-		}
+			richText += ` ${isReady ? "<color=#00FF00>✅已准备</color>" : "<color=#FF0000>❌未准备</color>"}`;
 
-		// 设置用户颜色指示器
-		const colorIndicator = userItem.getChildByName("ColorIndicator");
-		if (colorIndicator) {
-			const sprite = colorIndicator.getComponent(Sprite);
-			if (sprite) {
-				const color = new Color(user.color.r, user.color.g, user.color.b, 255);
-				sprite.color = color;
-			}
+			nameLabel.string = richText;
 		}
 
 		// 设置位置
-		userItem.setPosition(0, -index * 30, 0);
+		userItem.setPosition(0, -index * 50 - 20, 0);
 
 		return userItem;
 	}
@@ -584,7 +576,7 @@ export class RoomTest extends Component {
 			if (this.currentRoomData && this.currentUser) {
 				this.currentRoomData.users.forEach((user) => {
 					const isCurrentPlayer = user.id === this.currentUser!.id;
-					this.gameTest.createPlayer(user.id, isCurrentPlayer);
+					this.gameTest.createPlayer(user.id, isCurrentPlayer, user.color);
 				});
 			}
 
