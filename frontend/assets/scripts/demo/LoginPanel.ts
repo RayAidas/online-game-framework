@@ -1,9 +1,9 @@
 import { _decorator, Component, EditBox } from "cc";
-import { HttpClient } from "tsrpc-browser";
-import { getUserClient } from "./getUserClient";
 import { CurrentUser } from "db://assets/scripts/shared/models/CurrentUser";
 import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { ServiceType } from "db://assets/scripts/shared/protocols/serviceProto_userServer";
+import { HttpClient } from "tsrpc-browser";
+import { getUserClient } from "../getUserClient";
 const { ccclass, property } = _decorator;
 
 @ccclass("LoginPanel")

@@ -1,6 +1,6 @@
 import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { serviceProto } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
-import { WsClient } from "../env";
+import { WsClient } from "./env";
 
 export const getRoomClient = function () {
 	const client = new WsClient(serviceProto, {

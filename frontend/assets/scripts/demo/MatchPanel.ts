@@ -4,8 +4,8 @@ import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { ServiceType as MatchServiceType } from "db://assets/scripts/shared/protocols/serviceProto_matchServer";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { HttpClient, WsClient } from "tsrpc-browser";
-import { getMatchClient } from "./getMatchClient";
-import { getRoomClient } from "./getRoomClient";
+import { getMatchClient } from "../getMatchClient";
+import { getRoomClient } from "../getRoomClient";
 import { RoomPanel } from "./RoomPanel";
 const { ccclass, property } = _decorator;
 

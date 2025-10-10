@@ -172,8 +172,11 @@ frontend/
 │       │   ├── GameDemo.ts      # 游戏演示
 │       │   ├── LoginPanel.ts    # 登录界面
 │       │   ├── MatchPanel.ts    # 匹配界面
-│       │   ├── RoomPanel.ts     # 房间界面
-│       │   └── get*Client.ts    # 客户端连接器
+│       │   └── RoomPanel.ts     # 房间界面
+│       ├── env.ts           # 环境适配器
+│       ├── getMatchClient.ts    # 匹配服务客户端
+│       ├── getRoomClient.ts     # 房间服务客户端
+│       ├── getUserClient.ts     # 用户服务客户端
 │       └── shared/          # 共享代码
 │           ├── models/      # 数据模型
 │           │   ├── CurrentUser.ts    # 当前用户
