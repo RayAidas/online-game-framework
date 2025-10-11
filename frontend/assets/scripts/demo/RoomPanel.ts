@@ -590,12 +590,8 @@ export class RoomPanel extends Component {
 			}
 
 			// 监听GameDemo的玩家移动事件
-			this.gameDemo.node.on("playerMove", (inputData: any) => {
-				this.sendInput(inputData.inputType, {
-					x: inputData.x,
-					y: inputData.y,
-					timestamp: inputData.timestamp,
-				});
+			this.gameDemo.node.on("playerInput", (inputData: any) => {
+				this.sendInput(inputData.inputType, inputData);
 			});
 		}
 	}
@@ -618,7 +614,10 @@ export class RoomPanel extends Component {
 					if (operate.inputType === "Move") {
 						// 更新其他玩家位置
 						this.gameDemo.updatePlayerPosition(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
-						console.log(`更新玩家 ${connectionInput.connectionId} 位置: (${operate.x}, ${operate.y})`);
+					}
+					if (operate.inputType === "Fire") {
+						// 创建子弹
+						this.gameDemo.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
 					}
 				});
 			});

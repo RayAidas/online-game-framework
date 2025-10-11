@@ -1,4 +1,5 @@
-import { _decorator, Color, Component, EventKeyboard, input, Input, instantiate, KeyCode, Node, Prefab, Sprite, Vec3 } from "cc";
+import { _decorator, Color, Component, EventKeyboard, EventMouse, input, Input, instantiate, KeyCode, Node, Prefab, screen, Sprite, Vec2, Vec3 } from "cc";
+import { Bullet } from "./Bullet";
 const { ccclass, property } = _decorator;
 
 /**
@@ -18,18 +19,25 @@ const { ccclass, property } = _decorator;
 @ccclass("GameDemo")
 export class GameDemo extends Component {
 	@property(Prefab) playerPrefab: Prefab = null!;
+	@property(Prefab) bulletPrefab: Prefab = null!;
 	@property({ tooltip: "移动速度（像素/秒）" })
 	moveSpeed: number = 200;
 	@property({ tooltip: "移动输入发送间隔（毫秒）" })
 	moveInterval: number = 50;
+	@property({ tooltip: "子弹速度（像素/秒）" })
+	bulletSpeed: number = 500;
+	@property({ tooltip: "子弹生命周期（秒）" })
+	bulletLifetime: number = 3;
 
 	public currentPlayer: Node = null!;
 	private players: Map<string, Node> = new Map();
 	private pressedKeys: Set<KeyCode> = new Set();
 	private lastMoveTime: number = 0;
+	private bullets: Node[] = [];
 
 	start() {
 		this.setupKeyboardInput();
+		this.setupNodeClick();
 	}
 
 	/**
@@ -38,6 +46,23 @@ export class GameDemo extends Component {
 	private setupKeyboardInput() {
 		input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
 		input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
+	}
+
+	/**
+	 * 设置节点点击事件
+	 */
+	private setupNodeClick() {
+		// 监听节点点击事件
+		this.node.on(Node.EventType.MOUSE_DOWN, this.onNodeMouseDown, this);
+	}
+
+	/**
+	 * 节点鼠标按下事件
+	 */
+	private onNodeMouseDown(event: EventMouse) {
+		if (event.getButton() === EventMouse.BUTTON_LEFT) {
+			this.fireBullet(event);
+		}
 	}
 
 	/**
@@ -60,28 +85,90 @@ export class GameDemo extends Component {
 	 * 发送移动输入到服务器
 	 */
 	private sendMoveInput(position: Vec3) {
-		// 将当前玩家的位置转换为服务器坐标
-		// 当前玩家在下方，但服务器需要知道真实位置
-		const serverPosition = this.transformPositionForServer(position);
-
 		// 通过事件系统发送输入到RoomPanel
-		this.node.emit("playerMove", {
+		this.node.emit("playerInput", {
 			inputType: "Move",
-			x: serverPosition.x,
-			y: serverPosition.y,
+			x: position.x,
+			y: position.y,
 			timestamp: Date.now(),
 		});
 	}
 
 	/**
-	 * 将客户端显示坐标转换为服务器坐标
-	 * @param displayPosition 客户端显示位置
-	 * @returns 服务器坐标
+	 * 发射子弹
 	 */
-	private transformPositionForServer(displayPosition: Vec3): Vec3 {
-		// 当前玩家在下方，服务器需要知道真实位置
-		// 这里可以根据游戏逻辑调整转换规则
-		return new Vec3(displayPosition.x, displayPosition.y, displayPosition.z);
+	private fireBullet(event: EventMouse) {
+		if (!this.currentPlayer) {
+			console.warn("GameDemo: 无法发射子弹 - 当前玩家未设置");
+			return;
+		}
+
+		// 获取鼠标点击的屏幕坐标
+		const mousePos = event.getUILocation();
+
+		// 获取当前玩家位置
+		const playerPos = this.currentPlayer.getWorldPosition();
+
+		// 计算子弹方向：从玩家位置指向鼠标点击位置
+		const direction = new Vec3(mousePos.x - playerPos.x, mousePos.y - playerPos.y, 0).normalize();
+
+		// 创建子弹
+		this.createBullet(playerPos, direction);
+
+		// 发送子弹输入到服务器
+		this.sendBulletInput(mousePos);
+	}
+
+	/**
+	 * 创建子弹
+	 */
+	public createBullet(startPos: Vec3, direction: Vec3) {
+		// 使用 Bullet 组件创建子弹
+		const bulletNode = instantiate(this.bulletPrefab);
+
+		// 计算子弹旋转角度（让子弹朝向移动方向）
+		const angle = (Math.atan2(direction.y, direction.x) * 180) / Math.PI - 90;
+		bulletNode.setRotationFromEuler(0, 0, angle);
+
+		// 获取子弹组件并初始化
+		const bulletComponent = bulletNode.getComponent(Bullet);
+		this.node.addChild(bulletNode);
+		if (bulletComponent) {
+			// 初始化子弹：设置起始位置、方向、速度、生命周期
+			bulletComponent.init(startPos, direction, this.bulletSpeed, this.bulletLifetime);
+		}
+
+		// 添加到场景
+
+		// 保存子弹引用
+		this.bullets.push(bulletNode);
+	}
+
+	/**
+	 * 生成玩家子弹
+	 */
+	public createPlayerBullet(playerId: string, touchPos: Vec3) {
+		let playerNode = this.players.get(playerId);
+		if (playerNode) {
+			// 计算子弹方向：从玩家位置指向鼠标点击位置
+			let targetX = screen.windowSize.width - touchPos.x;
+			let targetY = screen.windowSize.height - touchPos.y;
+			const direction = new Vec3(targetX - playerNode.getPosition().x, targetY - playerNode.getPosition().y, 0).normalize();
+			this.createBullet(playerNode.getWorldPosition(), direction);
+		}
+	}
+
+	/**
+	 * 发送子弹输入到服务器
+	 */
+	private sendBulletInput(touchPos: Vec2 | Vec3) {
+		// 通过事件系统发送子弹输入到RoomPanel
+		this.node.emit("playerInput", {
+			inputType: "Fire",
+			x: touchPos.x,
+			y: touchPos.y,
+			timestamp: Date.now(),
+		});
 	}
 
 	/**
@@ -165,9 +252,6 @@ export class GameDemo extends Component {
 			// 应用坐标转换：每个客户端看到的其他玩家都在上方
 			const transformedPosition = this.transformPositionForDisplay(playerId, position);
 			playerNode.setPosition(transformedPosition);
-			console.log(`GameDemo: 更新玩家 ${playerId} 位置到 (${transformedPosition.x}, ${transformedPosition.y})`);
-		} else {
-			console.log(`GameDemo: 找不到玩家 ${playerId}，当前玩家列表:`, Array.from(this.players.keys()));
 		}
 	}
 
@@ -194,7 +278,7 @@ export class GameDemo extends Component {
 		// 这样 -200 变成 400，-100 变成 300，-300 变成 500
 		displayY = -position.y + 200;
 
-		return new Vec3(position.x, displayY, position.z);
+		return new Vec3(-position.x, displayY, position.z);
 	}
 
 	/**
@@ -251,6 +335,22 @@ export class GameDemo extends Component {
 	update(deltaTime: number) {
 		// 处理长按移动
 		this.handleContinuousMovement(deltaTime);
+
+		// 处理子弹移动
+		this.updateBullets(deltaTime);
+	}
+
+	/**
+	 * 更新子弹移动
+	 */
+	private updateBullets(deltaTime: number) {
+		// 清理无效的子弹引用
+		for (let i = this.bullets.length - 1; i >= 0; i--) {
+			const bullet = this.bullets[i];
+			if (!bullet || !bullet.isValid) {
+				this.bullets.splice(i, 1);
+			}
+		}
 	}
 
 	/**
@@ -302,9 +402,6 @@ export class GameDemo extends Component {
 			this.currentPlayer.setPosition(newPos);
 			this.sendMoveInput(newPos);
 			this.lastMoveTime = currentTime;
-
-			// 调试信息（可选）
-			// console.log(`玩家移动: ${moveDirection}, 位置: (${newPos.x.toFixed(1)}, ${newPos.y.toFixed(1)})`);
 		}
 	}
 
@@ -314,5 +411,21 @@ export class GameDemo extends Component {
 	onDestroy() {
 		input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
 		input.off(Input.EventType.KEY_UP, this.onKeyUp, this);
+
+		// 清理节点事件
+		this.node.off(Node.EventType.MOUSE_DOWN, this.onNodeMouseDown, this);
+
+		// 清理所有子弹
+		this.bullets.forEach((bullet) => {
+			if (bullet && bullet.isValid) {
+				const bulletComponent = bullet.getComponent(Bullet);
+				if (bulletComponent) {
+					bulletComponent.destroyBullet();
+				} else {
+					bullet.destroy();
+				}
+			}
+		});
+		this.bullets = [];
 	}
 }
