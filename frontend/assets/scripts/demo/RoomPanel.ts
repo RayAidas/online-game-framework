@@ -617,10 +617,10 @@ export class RoomPanel extends Component {
 					}
 					if (operate.inputType === "Fire") {
 						// 创建子弹
-						this.gameDemo.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
+						this.gameDemo.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0), operate.bulletId);
 					}
 					if (operate.inputType === "BeHit") {
-						this.gameDemo.beHit(connectionInput.connectionId);
+						this.gameDemo.beHit(connectionInput.connectionId, operate.bulletId);
 					}
 				});
 			});

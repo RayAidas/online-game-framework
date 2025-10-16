@@ -148,7 +148,7 @@
       "__id__": 7
     },
     "speed": 500,
-    "lifetime": 3,
+    "lifetime": 5,
     "bulletColor": {
       "__type__": "cc.Color",
       "r": 255,

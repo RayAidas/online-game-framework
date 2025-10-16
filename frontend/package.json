@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "tsrpc-browser": "^3.4.16",
-    "tsrpc-miniapp": "^3.4.17"
+    "tsrpc-miniapp": "^3.4.17",
+    "uuid": "^13.0.0"
   },
   "browserslist": [
     "defaults"

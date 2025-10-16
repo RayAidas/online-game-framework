@@ -3,6 +3,7 @@ import { UserInfo } from "../shared/types/UserInfo";
 import { getDistance } from "../util";
 import { Bullet } from "./Bullet";
 import { PlayerInfo } from "./PlayerInfo";
+import * as _uuid from "uuid";
 const { ccclass, property } = _decorator;
 
 /**
@@ -41,9 +42,15 @@ export class GameDemo extends Component {
 	private bullets: Node[] = [];
 	private _playerIndex: number = 0;
 
+	// 保存绑定后的函数引用，用于正确清理事件监听
+	private boundOnWindowBlur: () => void = null!;
+	private boundOnWindowFocus: () => void = null!;
+	private boundOnVisibilityChange: () => void = null!;
+
 	start() {
 		this.setupKeyboardInput();
 		this.setupNodeClick();
+		this.setupWindowFocusListener();
 	}
 
 	/**
@@ -52,6 +59,51 @@ export class GameDemo extends Component {
 	private setupKeyboardInput() {
 		input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
 		input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
+	}
+
+	/**
+	 * 设置窗口焦点监听
+	 */
+	private setupWindowFocusListener() {
+		// 保存绑定后的函数引用
+		this.boundOnWindowBlur = this.onWindowBlur.bind(this);
+		this.boundOnWindowFocus = this.onWindowFocus.bind(this);
+		this.boundOnVisibilityChange = this.onVisibilityChange.bind(this);
+
+		// 监听窗口失去焦点事件
+		window.addEventListener("blur", this.boundOnWindowBlur);
+		// 监听窗口获得焦点事件
+		window.addEventListener("focus", this.boundOnWindowFocus);
+		// 监听页面可见性变化
+		document.addEventListener("visibilitychange", this.boundOnVisibilityChange);
+	}
+
+	/**
+	 * 窗口失去焦点时清空按键状态
+	 */
+	private onWindowBlur() {
+		console.log("GameDemo: 窗口失去焦点，清空按键状态");
+		this.pressedKeys.clear();
+	}
+
+	/**
+	 * 窗口获得焦点
+	 */
+	private onWindowFocus() {
+		console.log("GameDemo: 窗口获得焦点");
+		// 不需要做特殊处理，用户重新按键时会自动添加
+	}
+
+	/**
+	 * 页面可见性变化
+	 */
+	private onVisibilityChange() {
+		if (document.hidden) {
+			console.log("GameDemo: 页面隐藏，清空按键状态");
+			this.pressedKeys.clear();
+		} else {
+			console.log("GameDemo: 页面显示");
+		}
 	}
 
 	/**
@@ -118,17 +170,18 @@ export class GameDemo extends Component {
 		// 计算子弹方向：从玩家位置指向鼠标点击位置
 		const direction = new Vec3(mousePos.x - playerPos.x, mousePos.y - playerPos.y, 0).normalize();
 
+		let bulletId = _uuid.v4();
 		// 创建子弹
-		this.createBullet(this.currentPlayerId, playerPos, direction);
+		this.createBullet(this.currentPlayerId, playerPos, direction, bulletId);
 
 		// 发送子弹输入到服务器
-		this.sendBulletInput(mousePos);
+		this.sendBulletInput(mousePos, bulletId);
 	}
 
 	/**
 	 * 创建子弹
 	 */
-	public createBullet(playerId: string, startPos: Vec3, direction: Vec3) {
+	public createBullet(playerId: string, startPos: Vec3, direction: Vec3, uuid: string) {
 		// 使用 Bullet 组件创建子弹
 		const bulletNode = instantiate(this.bulletPrefab);
 
@@ -141,7 +194,7 @@ export class GameDemo extends Component {
 		this.node.addChild(bulletNode);
 		if (bulletComponent) {
 			// 初始化子弹：设置起始位置、方向、速度、生命周期
-			bulletComponent.init(playerId, startPos, direction, this.bulletSpeed, this.bulletLifetime);
+			bulletComponent.init(playerId, startPos, direction, uuid, this.bulletSpeed, this.bulletLifetime);
 		}
 
 		// 添加到场景
@@ -153,37 +206,39 @@ export class GameDemo extends Component {
 	/**
 	 * 生成玩家子弹
 	 */
-	public createPlayerBullet(playerId: string, touchPos: Vec3) {
+	public createPlayerBullet(playerId: string, touchPos: Vec3, bulletId: string) {
 		let playerNode = this.players.get(playerId);
 		if (playerNode) {
 			// 计算子弹方向：从玩家位置指向鼠标点击位置
 			let targetX = screen.windowSize.width - touchPos.x;
 			let targetY = screen.windowSize.height - touchPos.y;
 			const direction = new Vec3(targetX - playerNode.getPosition().x, targetY - playerNode.getPosition().y, 0).normalize();
-			this.createBullet(playerId, playerNode.getWorldPosition(), direction);
+			this.createBullet(playerId, playerNode.getWorldPosition(), direction, bulletId);
 		}
 	}
 
 	/**
 	 * 发送子弹输入到服务器
 	 */
-	private sendBulletInput(touchPos: Vec2 | Vec3) {
+	private sendBulletInput(touchPos: Vec2 | Vec3, bulletId: string) {
 		// 通过事件系统发送子弹输入到RoomPanel
 		this.node.emit("playerInput", {
 			inputType: "Fire",
 			x: touchPos.x,
 			y: touchPos.y,
 			timestamp: Date.now(),
+			bulletId: bulletId,
 		});
 	}
 
 	/**
 	 * 发送玩家被击中事件到服务器
 	 */
-	private sendPlayerBeHitInput(playerId: string) {
+	private sendPlayerBeHitInput(playerId: string, bulletId: string) {
 		this.node.emit("playerInput", {
 			inputType: "BeHit",
 			playerId: playerId,
+			bulletId: bulletId,
 			timestamp: Date.now(),
 		});
 	}
@@ -357,9 +412,13 @@ export class GameDemo extends Component {
 	 * 玩家被被击中
 	 * @param playerId 被击中的玩家ID
 	 */
-	public beHit(playerId: string) {
+	public beHit(playerId: string, bulletId?: string) {
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
 		if (playerInfo) playerInfo.updateHp(-10);
+		if (bulletId) {
+			let bullet = this.bullets.find((bullet) => bullet.getComponent(Bullet)?.bulletId === bulletId);
+			if (bullet) bullet.getComponent(Bullet)?.destroyBullet();
+		}
 	}
 
 	update(deltaTime: number) {
@@ -388,7 +447,7 @@ export class GameDemo extends Component {
 				if (getDistance(bullet.node.getPosition(), this.currentPlayer.getPosition()) < 50) {
 					bullet.destroyBullet();
 					this.beHit(this.currentPlayerId);
-					this.sendPlayerBeHitInput(this.currentPlayerId);
+					this.sendPlayerBeHitInput(this.currentPlayerId, bullet.bulletId);
 				}
 			});
 	}
@@ -454,6 +513,17 @@ export class GameDemo extends Component {
 
 		// 清理节点事件
 		this.node.off(Node.EventType.MOUSE_DOWN, this.onNodeMouseDown, this);
+
+		// 清理窗口事件监听
+		if (this.boundOnWindowBlur) {
+			window.removeEventListener("blur", this.boundOnWindowBlur);
+		}
+		if (this.boundOnWindowFocus) {
+			window.removeEventListener("focus", this.boundOnWindowFocus);
+		}
+		if (this.boundOnVisibilityChange) {
+			document.removeEventListener("visibilitychange", this.boundOnVisibilityChange);
+		}
 
 		// 清理所有子弹
 		this.bullets.forEach((bullet) => {
