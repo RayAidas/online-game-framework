@@ -585,7 +585,7 @@ export class RoomPanel extends Component {
 			if (this.currentRoomData && this.currentUser) {
 				this.currentRoomData.users.forEach((user) => {
 					const isCurrentPlayer = user.id === this.currentUser!.id;
-					this.gameDemo.createPlayer(user.id, isCurrentPlayer, user.color);
+					this.gameDemo.createPlayer(user, isCurrentPlayer);
 				});
 			}
 
@@ -618,6 +618,9 @@ export class RoomPanel extends Component {
 					if (operate.inputType === "Fire") {
 						// 创建子弹
 						this.gameDemo.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
+					}
+					if (operate.inputType === "BeHit") {
+						this.gameDemo.beHit(connectionInput.connectionId);
 					}
 				});
 			});

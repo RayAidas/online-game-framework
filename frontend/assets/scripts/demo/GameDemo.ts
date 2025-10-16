@@ -1,5 +1,8 @@
 import { _decorator, Color, Component, EventKeyboard, EventMouse, input, Input, instantiate, KeyCode, Node, Prefab, screen, Sprite, Vec2, Vec3 } from "cc";
+import { UserInfo } from "../shared/types/UserInfo";
+import { getDistance } from "../util";
 import { Bullet } from "./Bullet";
+import { PlayerInfo } from "./PlayerInfo";
 const { ccclass, property } = _decorator;
 
 /**
@@ -20,6 +23,7 @@ const { ccclass, property } = _decorator;
 export class GameDemo extends Component {
 	@property(Prefab) playerPrefab: Prefab = null!;
 	@property(Prefab) bulletPrefab: Prefab = null!;
+	@property([PlayerInfo]) playerInfos: PlayerInfo[] = [];
 	@property({ tooltip: "移动速度（像素/秒）" })
 	moveSpeed: number = 200;
 	@property({ tooltip: "移动输入发送间隔（毫秒）" })
@@ -30,10 +34,12 @@ export class GameDemo extends Component {
 	bulletLifetime: number = 3;
 
 	public currentPlayer: Node = null!;
+	public currentPlayerId: string = "";
 	private players: Map<string, Node> = new Map();
 	private pressedKeys: Set<KeyCode> = new Set();
 	private lastMoveTime: number = 0;
 	private bullets: Node[] = [];
+	private _playerIndex: number = 0;
 
 	start() {
 		this.setupKeyboardInput();
@@ -113,7 +119,7 @@ export class GameDemo extends Component {
 		const direction = new Vec3(mousePos.x - playerPos.x, mousePos.y - playerPos.y, 0).normalize();
 
 		// 创建子弹
-		this.createBullet(playerPos, direction);
+		this.createBullet(this.currentPlayerId, playerPos, direction);
 
 		// 发送子弹输入到服务器
 		this.sendBulletInput(mousePos);
@@ -122,7 +128,7 @@ export class GameDemo extends Component {
 	/**
 	 * 创建子弹
 	 */
-	public createBullet(startPos: Vec3, direction: Vec3) {
+	public createBullet(playerId: string, startPos: Vec3, direction: Vec3) {
 		// 使用 Bullet 组件创建子弹
 		const bulletNode = instantiate(this.bulletPrefab);
 
@@ -135,7 +141,7 @@ export class GameDemo extends Component {
 		this.node.addChild(bulletNode);
 		if (bulletComponent) {
 			// 初始化子弹：设置起始位置、方向、速度、生命周期
-			bulletComponent.init(startPos, direction, this.bulletSpeed, this.bulletLifetime);
+			bulletComponent.init(playerId, startPos, direction, this.bulletSpeed, this.bulletLifetime);
 		}
 
 		// 添加到场景
@@ -154,7 +160,7 @@ export class GameDemo extends Component {
 			let targetX = screen.windowSize.width - touchPos.x;
 			let targetY = screen.windowSize.height - touchPos.y;
 			const direction = new Vec3(targetX - playerNode.getPosition().x, targetY - playerNode.getPosition().y, 0).normalize();
-			this.createBullet(playerNode.getWorldPosition(), direction);
+			this.createBullet(playerId, playerNode.getWorldPosition(), direction);
 		}
 	}
 
@@ -172,11 +178,23 @@ export class GameDemo extends Component {
 	}
 
 	/**
+	 * 发送玩家被击中事件到服务器
+	 */
+	private sendPlayerBeHitInput(playerId: string) {
+		this.node.emit("playerInput", {
+			inputType: "BeHit",
+			playerId: playerId,
+			timestamp: Date.now(),
+		});
+	}
+
+	/**
 	 * 创建玩家节点
 	 */
-	public createPlayer(playerId: string, isCurrentPlayer: boolean = false, color?: { r: number; g: number; b: number }): Node {
+	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false): Node {
 		let playerNode: Node;
-
+		let playerId = user.id;
+		let color = user.color;
 		if (this.playerPrefab) {
 			// 使用预制体创建玩家
 			playerNode = instantiate(this.playerPrefab);
@@ -218,10 +236,13 @@ export class GameDemo extends Component {
 
 		// 保存玩家引用
 		this.players.set(playerId, playerNode);
+		this.playerInfos[this._playerIndex].init(user.id, user.nickname, color);
+		this._playerIndex++;
 
 		// 如果是当前玩家，设置为可控制的玩家
 		if (isCurrentPlayer) {
 			this.currentPlayer = playerNode;
+			this.currentPlayerId = playerId;
 		}
 
 		return playerNode;
@@ -332,6 +353,15 @@ export class GameDemo extends Component {
 		return this.pressedKeys.size > 0;
 	}
 
+	/**
+	 * 玩家被被击中
+	 * @param playerId 被击中的玩家ID
+	 */
+	public beHit(playerId: string) {
+		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
+		if (playerInfo) playerInfo.updateHp(-10);
+	}
+
 	update(deltaTime: number) {
 		// 处理长按移动
 		this.handleContinuousMovement(deltaTime);
@@ -351,6 +381,16 @@ export class GameDemo extends Component {
 				this.bullets.splice(i, 1);
 			}
 		}
+		this.bullets
+			.filter((e) => e.getComponent(Bullet)?.ownerId !== this.currentPlayerId)
+			.forEach((e) => {
+				let bullet = e.getComponent(Bullet);
+				if (getDistance(bullet.node.getPosition(), this.currentPlayer.getPosition()) < 50) {
+					bullet.destroyBullet();
+					this.beHit(this.currentPlayerId);
+					this.sendPlayerBeHitInput(this.currentPlayerId);
+				}
+			});
 	}
 
 	/**

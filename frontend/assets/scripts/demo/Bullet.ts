@@ -16,6 +16,7 @@ export class Bullet extends Component {
 
 	private direction: Vec3 = new Vec3();
 	private isActive: boolean = true;
+	public ownerId: string;
 
 	/**
 	 * 初始化子弹
@@ -24,7 +25,8 @@ export class Bullet extends Component {
 	 * @param speed 移动速度
 	 * @param lifetime 生命周期
 	 */
-	public init(startPos: Vec3, direction: Vec3, speed?: number, lifetime?: number) {
+	public init(ownerId: string, startPos: Vec3, direction: Vec3, speed?: number, lifetime?: number) {
+		this.ownerId = ownerId;
 		this.direction = direction.clone();
 		this.speed = speed || this.speed;
 		this.lifetime = lifetime || this.lifetime;
