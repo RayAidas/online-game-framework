@@ -1,9 +1,9 @@
-import { _decorator, Color, Component, EventKeyboard, EventMouse, input, Input, instantiate, KeyCode, Node, Prefab, screen, Sprite, Vec2, Vec3 } from "cc";
+import { _decorator, Color, EventKeyboard, EventMouse, input, Input, instantiate, KeyCode, Node, Prefab, screen, Sprite, Vec2, Vec3 } from "cc";
+import * as _uuid from "uuid";
 import { UserInfo } from "../shared/types/UserInfo";
 import { getDistance } from "../util";
 import { Bullet } from "./Bullet";
-import { PlayerInfo } from "./PlayerInfo";
-import * as _uuid from "uuid";
+import { GameBase } from "./GameBase";
 const { ccclass, property } = _decorator;
 
 /**
@@ -21,31 +21,17 @@ const { ccclass, property } = _decorator;
  * - 初始位置：所有玩家都从 Y = -200 开始，其他玩家立即转换到上方
  */
 @ccclass("GameDemo")
-export class GameDemo extends Component {
+export class GameDemo extends GameBase {
 	@property(Prefab) playerPrefab: Prefab = null!;
 	@property(Prefab) bulletPrefab: Prefab = null!;
-	@property([PlayerInfo]) playerInfos: PlayerInfo[] = [];
-	@property({ tooltip: "移动速度（像素/秒）" })
-	moveSpeed: number = 200;
-	@property({ tooltip: "移动输入发送间隔（毫秒）" })
-	moveInterval: number = 50;
-	@property({ tooltip: "子弹速度（像素/秒）" })
-	bulletSpeed: number = 500;
-	@property({ tooltip: "子弹生命周期（秒）" })
-	bulletLifetime: number = 3;
+	@property({ tooltip: "移动速度（像素/秒）" }) moveSpeed: number = 200;
+	@property({ tooltip: "移动输入发送间隔（毫秒）" }) moveInterval: number = 50;
+	@property({ tooltip: "子弹速度（像素/秒）" }) bulletSpeed: number = 500;
+	@property({ tooltip: "子弹生命周期（秒）" }) bulletLifetime: number = 3;
 
-	public currentPlayer: Node = null!;
-	public currentPlayerId: string = "";
-	private players: Map<string, Node> = new Map();
 	private pressedKeys: Set<KeyCode> = new Set();
 	private lastMoveTime: number = 0;
 	private bullets: Node[] = [];
-	private _playerIndex: number = 0;
-
-	// 保存绑定后的函数引用，用于正确清理事件监听
-	private boundOnWindowBlur: () => void = null!;
-	private boundOnWindowFocus: () => void = null!;
-	private boundOnVisibilityChange: () => void = null!;
 
 	start() {
 		this.setupKeyboardInput();
@@ -62,26 +48,9 @@ export class GameDemo extends Component {
 	}
 
 	/**
-	 * 设置窗口焦点监听
-	 */
-	private setupWindowFocusListener() {
-		// 保存绑定后的函数引用
-		this.boundOnWindowBlur = this.onWindowBlur.bind(this);
-		this.boundOnWindowFocus = this.onWindowFocus.bind(this);
-		this.boundOnVisibilityChange = this.onVisibilityChange.bind(this);
-
-		// 监听窗口失去焦点事件
-		window.addEventListener("blur", this.boundOnWindowBlur);
-		// 监听窗口获得焦点事件
-		window.addEventListener("focus", this.boundOnWindowFocus);
-		// 监听页面可见性变化
-		document.addEventListener("visibilitychange", this.boundOnVisibilityChange);
-	}
-
-	/**
 	 * 窗口失去焦点时清空按键状态
 	 */
-	private onWindowBlur() {
+	onWindowBlur() {
 		console.log("GameDemo: 窗口失去焦点，清空按键状态");
 		this.pressedKeys.clear();
 	}
@@ -89,7 +58,7 @@ export class GameDemo extends Component {
 	/**
 	 * 窗口获得焦点
 	 */
-	private onWindowFocus() {
+	onWindowFocus() {
 		console.log("GameDemo: 窗口获得焦点");
 		// 不需要做特殊处理，用户重新按键时会自动添加
 	}
@@ -97,7 +66,7 @@ export class GameDemo extends Component {
 	/**
 	 * 页面可见性变化
 	 */
-	private onVisibilityChange() {
+	onVisibilityChange() {
 		if (document.hidden) {
 			console.log("GameDemo: 页面隐藏，清空按键状态");
 			this.pressedKeys.clear();
@@ -137,19 +106,6 @@ export class GameDemo extends Component {
 	private onKeyUp(event: EventKeyboard) {
 		// 从按下的键集合中移除
 		this.pressedKeys.delete(event.keyCode);
-	}
-
-	/**
-	 * 发送移动输入到服务器
-	 */
-	private sendMoveInput(position: Vec3) {
-		// 通过事件系统发送输入到RoomPanel
-		this.node.emit("playerInput", {
-			inputType: "Move",
-			x: position.x,
-			y: position.y,
-			timestamp: Date.now(),
-		});
 	}
 
 	/**
@@ -218,32 +174,6 @@ export class GameDemo extends Component {
 	}
 
 	/**
-	 * 发送子弹输入到服务器
-	 */
-	private sendBulletInput(touchPos: Vec2 | Vec3, bulletId: string) {
-		// 通过事件系统发送子弹输入到RoomPanel
-		this.node.emit("playerInput", {
-			inputType: "Fire",
-			x: touchPos.x,
-			y: touchPos.y,
-			timestamp: Date.now(),
-			bulletId: bulletId,
-		});
-	}
-
-	/**
-	 * 发送玩家被击中事件到服务器
-	 */
-	private sendPlayerBeHitInput(playerId: string, bulletId: string) {
-		this.node.emit("playerInput", {
-			inputType: "BeHit",
-			playerId: playerId,
-			bulletId: bulletId,
-			timestamp: Date.now(),
-		});
-	}
-
-	/**
 	 * 创建玩家节点
 	 */
 	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false): Node {
@@ -291,8 +221,8 @@ export class GameDemo extends Component {
 
 		// 保存玩家引用
 		this.players.set(playerId, playerNode);
-		this.playerInfos[this._playerIndex].init(user.id, user.nickname, color);
-		this._playerIndex++;
+		this.playerInfos[this.playerIndex].init(user.id, user.nickname, color);
+		this.playerIndex++;
 
 		// 如果是当前玩家，设置为可控制的玩家
 		if (isCurrentPlayer) {
@@ -358,23 +288,6 @@ export class GameDemo extends Component {
 	}
 
 	/**
-	 * 设置当前玩家
-	 */
-	public setCurrentPlayer(playerId: string) {
-		const playerNode = this.players.get(playerId);
-		if (playerNode) {
-			this.currentPlayer = playerNode;
-		}
-	}
-
-	/**
-	 * 获取所有玩家
-	 */
-	public getPlayers(): Map<string, Node> {
-		return this.players;
-	}
-
-	/**
 	 * 停止所有移动
 	 */
 	public stopAllMovement() {
@@ -414,7 +327,16 @@ export class GameDemo extends Component {
 	 */
 	public beHit(playerId: string, bulletId?: string) {
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
-		if (playerInfo) playerInfo.updateHp(-10);
+		if (playerInfo) {
+			playerInfo.updateHp(-10);
+			if (playerInfo.hp <= 0) {
+				this.overPanel.active = true;
+				if (playerId === this.currentPlayerId) this.overLabel.string = "你输了";
+				else this.overLabel.string = "你赢了";
+
+				this.sendGameOverInput();
+			}
+		}
 		if (bulletId) {
 			let bullet = this.bullets.find((bullet) => bullet.getComponent(Bullet)?.bulletId === bulletId);
 			if (bullet) bullet.getComponent(Bullet)?.destroyBullet();
@@ -504,6 +426,11 @@ export class GameDemo extends Component {
 		}
 	}
 
+	backHome() {
+		this.overPanel.active = false;
+		super.backHome();
+	}
+
 	/**
 	 * 组件销毁时清理
 	 */
@@ -537,5 +464,72 @@ export class GameDemo extends Component {
 			}
 		});
 		this.bullets = [];
+	}
+
+	/** -------------------事件发送------------------- */
+	/**
+	 * 发送移动输入到服务器
+	 */
+	private sendMoveInput(position: Vec3) {
+		// 通过事件系统发送输入到RoomPanel
+		this.node.emit("playerInput", {
+			inputType: "Move",
+			x: position.x,
+			y: position.y,
+			timestamp: Date.now(),
+		});
+	}
+
+	/**
+	 * 发送子弹输入到服务器
+	 */
+	private sendBulletInput(touchPos: Vec2 | Vec3, bulletId: string) {
+		// 通过事件系统发送子弹输入到RoomPanel
+		this.node.emit("playerInput", {
+			inputType: "Fire",
+			x: touchPos.x,
+			y: touchPos.y,
+			timestamp: Date.now(),
+			bulletId: bulletId,
+		});
+	}
+
+	/**
+	 * 发送玩家被击中事件到服务器
+	 */
+	private sendPlayerBeHitInput(playerId: string, bulletId: string) {
+		this.node.emit("playerInput", {
+			inputType: "BeHit",
+			playerId: playerId,
+			bulletId: bulletId,
+			timestamp: Date.now(),
+		});
+	}
+
+	/** 发送游戏结束事件到服务器 */
+	private sendGameOverInput() {
+		this.node.emit("playerInput", {
+			inputType: "GameOver",
+			timestamp: Date.now(),
+		});
+	}
+
+	/** -------------------处理帧同步------------------- */
+
+	/**
+	 * 同步帧数据
+	 */
+	public syncFrame(connectionInput: any, operate: any) {
+		if (operate.inputType === "Move") {
+			// 更新其他玩家位置
+			this.updatePlayerPosition(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
+		}
+		if (operate.inputType === "Fire") {
+			// 创建子弹
+			this.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0), operate.bulletId);
+		}
+		if (operate.inputType === "BeHit") {
+			this.beHit(connectionInput.connectionId, operate.bulletId);
+		}
 	}
 }

@@ -1,4 +1,4 @@
-import { _decorator, Button, Color, Component, EditBox, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, UITransform, Vec3 } from "cc";
+import { _decorator, Button, Color, Component, EditBox, instantiate, Label, Layout, Node, Prefab, RichText, ScrollView, UITransform } from "cc";
 import { MsgChat } from "db://assets/scripts/shared/protocols/roomServer/serverMsg/MsgChat";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { FrameSyncClient, IFrameSyncConnect, InputHandler } from "db://assets/scripts/shared/services/FrameSyncClient";
@@ -6,7 +6,7 @@ import { MsgAfterFrames, MsgInpFrame, MsgRequireSyncState, MsgSyncFrame, MsgSync
 import { RoomData } from "db://assets/scripts/shared/types/RoomData";
 import { UserInfo } from "db://assets/scripts/shared/types/UserInfo";
 import { WsClient } from "tsrpc-browser";
-import { GameDemo } from "./GameDemo";
+import { GameBase } from "./GameBase";
 
 const { ccclass, property } = _decorator;
 
@@ -21,16 +21,17 @@ export class RoomPanel extends Component {
 	@property(Button) readyButton: Button = null!;
 	@property(Label) readyStatusLabel: Label = null!;
 	@property(Label) userAlreadyReadyLabel: Label = null!;
-	@property(GameDemo) gameDemo: GameDemo = null!;
 	@property(ScrollView) chatListScrollView: ScrollView = null!;
 	@property(Prefab) chatItemTemplate: Prefab = null!;
 	@property(EditBox) chatInput: EditBox = null!;
+	@property(Prefab) gamePrefab: Prefab = null!;
 
 	private roomClient: WsClient<RoomServiceType>;
 	private currentRoomData: RoomData | null = null;
 	private currentUser: UserInfo | null = null;
 	// 帧同步客户端
 	private frameSyncClient: FrameSyncClient | null = null;
+	public game: GameBase = null!;
 
 	start() {
 		this.updateRoomInfo();
@@ -131,7 +132,11 @@ export class RoomPanel extends Component {
 			this.userAlreadyReadyLabel.string = `已准备: ${readyCount}/${totalCount}`;
 		}
 		if (readyCount == this.currentRoomData.maxUser) {
-			this.gameDemo.node.active = true;
+			if (this.game) return;
+			let gameNode = instantiate(this.gamePrefab);
+			this.game = gameNode.getComponent(GameBase);
+			this.game.init();
+			this.node.parent.addChild(gameNode);
 		}
 	}
 
@@ -580,17 +585,17 @@ export class RoomPanel extends Component {
 	 * 处理游戏开始消息
 	 */
 	private handleGameStarted(msg: any) {
-		if (this.gameDemo) {
+		if (this.game) {
 			// 为房间内所有用户创建玩家节点
 			if (this.currentRoomData && this.currentUser) {
 				this.currentRoomData.users.forEach((user) => {
 					const isCurrentPlayer = user.id === this.currentUser!.id;
-					this.gameDemo.createPlayer(user, isCurrentPlayer);
+					this.game.createPlayer(user, isCurrentPlayer);
 				});
 			}
 
 			// 监听GameDemo的玩家移动事件
-			this.gameDemo.node.on("playerInput", (inputData: any) => {
+			this.game.node.on("playerInput", (inputData: any) => {
 				this.sendInput(inputData.inputType, inputData);
 			});
 		}
@@ -604,6 +609,11 @@ export class RoomPanel extends Component {
 		// 例如：更新其他玩家的位置等
 		if (msg.syncFrame && msg.syncFrame.connectionInputs) {
 			msg.syncFrame.connectionInputs.forEach((connectionInput: any) => {
+				let gameOverOperate = connectionInput.operates.filter((e) => e.inputType === "GameOver")[0];
+				if (gameOverOperate) {
+					this.callSetReady(false);
+					return;
+				}
 				// 跳过当前用户的输入，因为当前用户的位置已经在本地更新了
 				if (this.currentUser && connectionInput.connectionId === this.currentUser.id.toString()) {
 					return;
@@ -611,17 +621,7 @@ export class RoomPanel extends Component {
 
 				// 处理每个连接的输入
 				connectionInput.operates.forEach((operate: any) => {
-					if (operate.inputType === "Move") {
-						// 更新其他玩家位置
-						this.gameDemo.updatePlayerPosition(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0));
-					}
-					if (operate.inputType === "Fire") {
-						// 创建子弹
-						this.gameDemo.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0), operate.bulletId);
-					}
-					if (operate.inputType === "BeHit") {
-						this.gameDemo.beHit(connectionInput.connectionId, operate.bulletId);
-					}
+					this.game.syncFrame(connectionInput, operate);
 				});
 			});
 		}
