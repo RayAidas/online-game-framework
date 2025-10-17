@@ -1,4 +1,6 @@
 import { _decorator, Component, Label, Node } from "cc";
+import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
+import { WsClient } from "tsrpc-browser";
 import { UserInfo } from "../shared/types/UserInfo";
 import { PlayerInfo } from "./PlayerInfo";
 const { ccclass, property } = _decorator;
@@ -9,10 +11,13 @@ export class GameBase extends Component {
 	@property(Node) overPanel: Node = null!;
 	@property(Label) overLabel: Label = null!;
 
+	public roomClient: WsClient<RoomServiceType>;
+
 	public currentPlayer: Node = null!;
 	public currentPlayerId: string = "";
 	public players: Map<string, Node> = new Map();
 	public playerIndex: number = 0;
+	public isGameOver: boolean = false;
 
 	// 保存绑定后的函数引用，用于正确清理事件监听
 	public boundOnWindowBlur: () => void = null!;
@@ -21,9 +26,9 @@ export class GameBase extends Component {
 
 	start() {}
 
-	public init(data?: {
-		[key: string]: any;
-	}) {}
+	public init(roomClient: WsClient<RoomServiceType>) {
+		this.roomClient = roomClient;
+	}
 
 	/**
 	 * 设置窗口焦点监听
@@ -74,6 +79,11 @@ export class GameBase extends Component {
 	public backHome() {
 		this.node.removeFromParent();
 		this.node.destroy();
+	}
+
+	public gameOver() {
+		this.isGameOver = true;
+		// this.roomClient.callApi("GameOver", {});
 	}
 
 	update(deltaTime: number) {}

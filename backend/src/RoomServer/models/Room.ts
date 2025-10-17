@@ -188,6 +188,30 @@ export class Room {
 		return this.frameSyncService;
 	}
 
+	/**
+	 * 暂停帧同步
+	 */
+	pauseFrameSync() {
+		if (this.frameSyncService) {
+			this.frameSyncService.pauseSyncFrame();
+			this.logger.log("[FrameSync] 帧同步已暂停");
+		} else {
+			this.logger.warn("[FrameSync] 帧同步服务未启动，无法暂停");
+		}
+	}
+
+	/**
+	 * 恢复帧同步
+	 */
+	resumeFrameSync() {
+		if (this.frameSyncService) {
+			this.frameSyncService.resumeSyncFrame();
+			this.logger.log("[FrameSync] 帧同步已恢复");
+		} else {
+			this.logger.warn("[FrameSync] 帧同步服务未启动，无法恢复");
+		}
+	}
+
 	private _intervals: ReturnType<typeof setInterval>[] = [];
 	private _setInterval(func: () => void, interval: number) {
 		this._intervals.push(setInterval(func, interval));

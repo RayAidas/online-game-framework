@@ -80,6 +80,11 @@ export class RoomPanel extends Component {
 			console.log("收到聊天消息:", msg.content);
 			this.handleChat(msg);
 		});
+
+		// this.roomClient.listenMsg("serverMsg/GameOver", (msg) => {
+		// 	console.log("收到游戏结束消息:", msg.message);
+		// 	this.handleGameOver(msg);
+		// });
 	}
 
 	private updateRoomInfo() {
@@ -133,9 +138,10 @@ export class RoomPanel extends Component {
 		}
 		if (readyCount == this.currentRoomData.maxUser) {
 			if (this.game) return;
+			if (this.isFrameSyncPaused()) this.resumeFrameSync();
 			let gameNode = instantiate(this.gamePrefab);
 			this.game = gameNode.getComponent(GameBase);
-			this.game.init();
+			this.game.init(this.roomClient);
 			this.node.parent.addChild(gameNode);
 		}
 	}
@@ -605,15 +611,11 @@ export class RoomPanel extends Component {
 	 * 处理帧同步消息
 	 */
 	private handleSyncFrame(msg: any) {
+		if (!this.game) return;
 		// 这里可以处理帧同步数据，更新游戏状态
 		// 例如：更新其他玩家的位置等
 		if (msg.syncFrame && msg.syncFrame.connectionInputs) {
 			msg.syncFrame.connectionInputs.forEach((connectionInput: any) => {
-				let gameOverOperate = connectionInput.operates.filter((e) => e.inputType === "GameOver")[0];
-				if (gameOverOperate) {
-					this.callSetReady(false);
-					return;
-				}
 				// 跳过当前用户的输入，因为当前用户的位置已经在本地更新了
 				if (this.currentUser && connectionInput.connectionId === this.currentUser.id.toString()) {
 					return;
@@ -660,5 +662,43 @@ export class RoomPanel extends Component {
 			this.roomClient.callApi("SendChat", { content });
 			this.chatInput.string = "";
 		}
+	}
+
+	/**
+	 * 暂停帧同步
+	 * 暂停后客户端不再接收和执行帧数据
+	 */
+	public pauseFrameSync() {
+		if (this.frameSyncClient) {
+			this.frameSyncClient.pauseFrameSync();
+			this.roomClient.callApi("PauseFrameSync", {});
+			console.log("RoomPanel: 帧同步已暂停");
+		} else {
+			console.warn("RoomPanel: 帧同步客户端未初始化");
+		}
+	}
+
+	/**
+	 * 恢复帧同步
+	 * 继续接收和执行帧数据
+	 */
+	public resumeFrameSync() {
+		if (this.frameSyncClient) {
+			this.frameSyncClient.resumeFrameSync();
+			this.roomClient.callApi("ResumeFrameSync", {});
+			console.log("RoomPanel: 帧同步已恢复");
+		} else {
+			console.warn("RoomPanel: 帧同步客户端未初始化");
+		}
+	}
+
+	/**
+	 * 检查帧同步是否暂停
+	 */
+	public isFrameSyncPaused(): boolean {
+		if (this.frameSyncClient) {
+			return this.frameSyncClient.isPaused();
+		}
+		return false;
 	}
 }

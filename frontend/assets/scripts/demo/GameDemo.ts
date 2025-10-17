@@ -87,6 +87,7 @@ export class GameDemo extends GameBase {
 	 * 节点鼠标按下事件
 	 */
 	private onNodeMouseDown(event: EventMouse) {
+		if (this.isGameOver) return;
 		if (event.getButton() === EventMouse.BUTTON_LEFT) {
 			this.fireBullet(event);
 		}
@@ -96,6 +97,7 @@ export class GameDemo extends GameBase {
 	 * 键盘按下事件
 	 */
 	private onKeyDown(event: EventKeyboard) {
+		if (this.isGameOver) return;
 		// 添加按下的键到集合中
 		this.pressedKeys.add(event.keyCode);
 	}
@@ -333,8 +335,6 @@ export class GameDemo extends GameBase {
 				this.overPanel.active = true;
 				if (playerId === this.currentPlayerId) this.overLabel.string = "你输了";
 				else this.overLabel.string = "你赢了";
-
-				this.sendGameOverInput();
 			}
 		}
 		if (bulletId) {
@@ -498,6 +498,7 @@ export class GameDemo extends GameBase {
 	 * 发送玩家被击中事件到服务器
 	 */
 	private sendPlayerBeHitInput(playerId: string, bulletId: string) {
+		console.log("Input:", "behit");
 		this.node.emit("playerInput", {
 			inputType: "BeHit",
 			playerId: playerId,
@@ -529,6 +530,7 @@ export class GameDemo extends GameBase {
 			this.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0), operate.bulletId);
 		}
 		if (operate.inputType === "BeHit") {
+			console.log("Input:", "behit");
 			this.beHit(connectionInput.connectionId, operate.bulletId);
 		}
 	}
