@@ -120,7 +120,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 34,
+    "version": 36,
     "services": [
         {
             "id": 31,
@@ -906,6 +906,15 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "target": "base/BaseRequest"
                     }
                 }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "playerId",
+                    "type": {
+                        "type": "String"
+                    }
+                }
             ]
         },
         "roomServer/PtlGameOver/ResGameOver": {
@@ -1335,7 +1344,30 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "roomServer/serverMsg/MsgGameOver/MsgGameOver": {
-            "type": "Interface"
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "message",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "playerId",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
         },
         "roomServer/serverMsg/MsgGameStarted/MsgGameStarted": {
             "type": "Interface",

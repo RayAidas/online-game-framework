@@ -16,12 +16,13 @@ export class Room {
 		[uid: string]: RoomUserState;
 	} = {};
 	logger: PrefixLogger;
+	overNum: number = 0;
 	/**帧同步服务*/
 	private frameSyncService: FrameSyncService | null = null;
 
 	constructor(data: RoomData) {
 		this.data = data;
-
+		this.overNum = 0;
 		this.logger = new PrefixLogger({
 			logger: roomServer.logger,
 			prefixs: [`[Room ${data.id}]`],

@@ -81,10 +81,14 @@ export class GameBase extends Component {
 		this.node.destroy();
 	}
 
-	public gameOver() {
+	public gameOver(playerId: string) {
 		this.isGameOver = true;
-		// this.roomClient.callApi("GameOver", {});
+		this.roomClient.callApi("GameOver", {
+			playerId: playerId,
+		});
 	}
+
+	public showOverPanel(playerId: string) {}
 
 	update(deltaTime: number) {}
 }

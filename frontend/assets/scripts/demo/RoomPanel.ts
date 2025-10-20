@@ -81,10 +81,10 @@ export class RoomPanel extends Component {
 			this.handleChat(msg);
 		});
 
-		// this.roomClient.listenMsg("serverMsg/GameOver", (msg) => {
-		// 	console.log("收到游戏结束消息:", msg.message);
-		// 	this.handleGameOver(msg);
-		// });
+		this.roomClient.listenMsg("serverMsg/GameOver", (msg) => {
+			console.log("收到游戏结束消息:", msg.message);
+			this.handleGameOver(msg);
+		});
 	}
 
 	private updateRoomInfo() {
@@ -143,6 +143,7 @@ export class RoomPanel extends Component {
 			this.game = gameNode.getComponent(GameBase);
 			this.game.init(this.roomClient);
 			this.node.parent.addChild(gameNode);
+			this.callSetReady(false);
 		}
 	}
 
@@ -638,6 +639,13 @@ export class RoomPanel extends Component {
 		if (this.chatListScrollView.content.getComponent(UITransform).height > this.chatListScrollView.node.getComponent(UITransform).height) {
 			this.chatListScrollView.scrollToBottom(0);
 		}
+	}
+
+	private handleGameOver(msg: any) {
+		console.log("游戏结束:", msg);
+		this.game.showOverPanel(msg.playerId);
+		this.pauseFrameSync();
+		this.game = null;
 	}
 
 	private createChatItem(msg: any): Node {

@@ -328,19 +328,25 @@ export class GameDemo extends GameBase {
 	 * @param playerId 被击中的玩家ID
 	 */
 	public beHit(playerId: string, bulletId?: string) {
+		if(this.isGameOver) return;
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
 		if (playerInfo) {
 			playerInfo.updateHp(-10);
 			if (playerInfo.hp <= 0) {
-				this.overPanel.active = true;
-				if (playerId === this.currentPlayerId) this.overLabel.string = "你输了";
-				else this.overLabel.string = "你赢了";
+				console.log("玩家被击中,游戏结束:", playerId);
+				this.gameOver(playerId);
 			}
 		}
 		if (bulletId) {
 			let bullet = this.bullets.find((bullet) => bullet.getComponent(Bullet)?.bulletId === bulletId);
 			if (bullet) bullet.getComponent(Bullet)?.destroyBullet();
 		}
+	}
+
+	public showOverPanel(playerId: string) {
+		this.overPanel.active = true;
+		if (playerId === this.currentPlayerId) this.overLabel.string = "你输了";
+		else this.overLabel.string = "你赢了";
 	}
 
 	update(deltaTime: number) {
@@ -503,14 +509,6 @@ export class GameDemo extends GameBase {
 			inputType: "BeHit",
 			playerId: playerId,
 			bulletId: bulletId,
-			timestamp: Date.now(),
-		});
-	}
-
-	/** 发送游戏结束事件到服务器 */
-	private sendGameOverInput() {
-		this.node.emit("playerInput", {
-			inputType: "GameOver",
 			timestamp: Date.now(),
 		});
 	}

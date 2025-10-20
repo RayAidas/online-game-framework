@@ -80,7 +80,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 13,
+    "version": 15,
     "services": [
         {
             "id": 11,
@@ -576,6 +576,15 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "target": "../base/BaseRequest"
                     }
                 }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "playerId",
+                    "type": {
+                        "type": "String"
+                    }
+                }
             ]
         },
         "PtlGameOver/ResGameOver": {
@@ -1017,6 +1026,13 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 1,
                     "name": "message",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "playerId",
                     "type": {
                         "type": "String"
                     }
