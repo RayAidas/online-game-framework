@@ -33,6 +33,8 @@ export class FrameSyncClient {
 	maxCanRenderFrameIndex = -1;
 	/**执行帧已经停止*/
 	executeFrameStop = true;
+	/**帧同步是否暂停*/
+	private _paused = false;
 	executeNextFrameHandler: any;
 	executeNextFrameTimerHD: any = 0;
 	connect: IFrameSyncConnect;
@@ -104,6 +106,11 @@ export class FrameSyncClient {
 	 * 处理同步帧消息
 	 */
 	private onSyncFrame(msg: MsgSyncFrame) {
+		// 如果暂停，不处理新帧
+		if (this._paused) {
+			return;
+		}
+
 		// 添加到追帧列表
 		this.afterFrames.push(msg.syncFrame);
 		this.maxCanRenderFrameIndex = msg.frameIndex;
@@ -151,6 +158,14 @@ export class FrameSyncClient {
 	 */
 	private executeNextFrame() {
 		if (this.executeFrameStop) {
+			return;
+		}
+
+		// 如果暂停，不执行帧，但继续定时检查
+		if (this._paused) {
+			this.executeNextFrameTimerHD = setTimeout(() => {
+				this.executeNextFrame();
+			}, this.renderFrameInvMs);
 			return;
 		}
 
@@ -223,5 +238,43 @@ export class FrameSyncClient {
 			afterFrames: this.afterFrames,
 			startFrameIndex: this.stateFrameIndex + 1,
 		};
+	}
+
+	/**
+	 * 暂停帧同步
+	 * 暂停后不接收新帧，不执行帧逻辑
+	 */
+	pauseFrameSync() {
+		if (this._paused) {
+			console.warn("FrameSyncClient: 帧同步已经处于暂停状态");
+			return;
+		}
+		this._paused = true;
+		console.log("FrameSyncClient: 帧同步已暂停");
+	}
+
+	/**
+	 * 恢复帧同步
+	 * 继续接收和执行帧
+	 */
+	resumeFrameSync() {
+		if (!this._paused) {
+			console.warn("FrameSyncClient: 帧同步未处于暂停状态");
+			return;
+		}
+		this._paused = false;
+		console.log("FrameSyncClient: 帧同步已恢复");
+
+		// 如果帧同步已停止，重新开始
+		if (this.executeFrameStop && this.afterFrames.length > 0) {
+			this.startExecuteFrame();
+		}
+	}
+
+	/**
+	 * 检查是否暂停
+	 */
+	isPaused(): boolean {
+		return this._paused;
 	}
 }

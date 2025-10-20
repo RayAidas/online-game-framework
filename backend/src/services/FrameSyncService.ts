@@ -26,6 +26,12 @@ export class FrameSyncService {
 		return this._syncing;
 	}
 
+	private _paused: boolean = false;
+	/**当前是否暂停*/
+	get paused() {
+		return this._paused;
+	}
+
 	private _nextSyncFrameIndex = 0;
 	/**下次同步的帧索引,从0开始, 执行完一次帧同步后值会更新为下一帧的帧索引*/
 	get nextSyncFrameIndex() {
@@ -98,6 +104,11 @@ export class FrameSyncService {
 	 * 同步一帧
 	 */
 	private syncOneFrame() {
+		// 如果暂停，不执行帧同步
+		if (this._paused) {
+			return;
+		}
+
 		// 构建当前帧的输入数据
 		const currentFrame = this.buildCurrentFrame();
 
@@ -174,5 +185,42 @@ export class FrameSyncService {
 	 */
 	getCurrentFrameIndex(): number {
 		return this._nextSyncFrameIndex - 1;
+	}
+
+	/**
+	 * 暂停帧同步
+	 * 定时器继续运行，但不生成和广播帧数据
+	 */
+	pauseSyncFrame() {
+		if (!this._syncing) {
+			console.warn("帧同步未启动，无法暂停");
+			return;
+		}
+		if (this._paused) {
+			console.warn("帧同步已经处于暂停状态");
+			return;
+		}
+		this._paused = true;
+		// 清空当前帧输入和追帧数据
+		this._currentFrameInputs.clear();
+		this._afterFrames = [];
+		console.log("帧同步已暂停");
+	}
+
+	/**
+	 * 恢复帧同步
+	 * 继续生成和广播帧数据
+	 */
+	resumeSyncFrame() {
+		if (!this._syncing) {
+			console.warn("帧同步未启动，无法恢复");
+			return;
+		}
+		if (!this._paused) {
+			console.warn("帧同步未处于暂停状态");
+			return;
+		}
+		this._paused = false;
+		console.log("帧同步已恢复");
 	}
 }

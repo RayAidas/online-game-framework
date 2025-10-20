@@ -4,11 +4,15 @@ import { MsgUserState } from './roomServer/clientMsg/MsgUserState';
 import { ReqAuth, ResAuth } from './roomServer/PtlAuth';
 import { ReqCreateRoom, ResCreateRoom } from './roomServer/PtlCreateRoom';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
+import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
+import { ReqPauseFrameSync, ResPauseFrameSync } from './roomServer/PtlPauseFrameSync';
+import { ReqResumeFrameSync, ResResumeFrameSync } from './roomServer/PtlResumeFrameSync';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
+import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
 import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
@@ -31,9 +35,21 @@ export interface ServiceType {
             req: ReqExitRoom,
             res: ResExitRoom
         },
+        "GameOver": {
+            req: ReqGameOver,
+            res: ResGameOver
+        },
         "JoinRoom": {
             req: ReqJoinRoom,
             res: ResJoinRoom
+        },
+        "PauseFrameSync": {
+            req: ReqPauseFrameSync,
+            res: ResPauseFrameSync
+        },
+        "ResumeFrameSync": {
+            req: ReqResumeFrameSync,
+            res: ResResumeFrameSync
         },
         "SendChat": {
             req: ReqSendChat,
@@ -52,6 +68,7 @@ export interface ServiceType {
         "clientMsg/UpdateRoomState": MsgUpdateRoomState,
         "clientMsg/UserState": MsgUserState,
         "serverMsg/Chat": MsgChat,
+        "serverMsg/GameOver": MsgGameOver,
         "serverMsg/GameStarted": MsgGameStarted,
         "serverMsg/OwnerChanged": MsgOwnerChanged,
         "serverMsg/SyncFrame": MsgSyncFrame,
@@ -63,7 +80,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 16,
+    "version": 15,
     "services": [
         {
             "id": 11,
@@ -101,8 +118,32 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 24,
+            "name": "GameOver",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
             "id": 5,
             "name": "JoinRoom",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
+            "id": 22,
+            "name": "PauseFrameSync",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
+            "id": 23,
+            "name": "ResumeFrameSync",
             "type": "api",
             "conf": {
                 "needLogin": true
@@ -132,6 +173,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 7,
             "name": "serverMsg/Chat",
+            "type": "msg"
+        },
+        {
+            "id": 25,
+            "name": "serverMsg/GameOver",
             "type": "msg"
         },
         {
@@ -520,6 +566,39 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlGameOver/ReqGameOver": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "playerId",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "PtlGameOver/ResGameOver": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
         "PtlJoinRoom/ReqJoinRoom": {
             "type": "Interface",
             "extends": [
@@ -756,6 +835,54 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlPauseFrameSync/ReqPauseFrameSync": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
+        },
+        "PtlPauseFrameSync/ResPauseFrameSync": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
+        "PtlResumeFrameSync/ReqResumeFrameSync": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
+        },
+        "PtlResumeFrameSync/ResResumeFrameSync": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
         "PtlSendChat/ReqSendChat": {
             "type": "Interface",
             "extends": [
@@ -880,6 +1007,32 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 2,
                     "name": "content",
+                    "type": {
+                        "type": "String"
+                    }
+                }
+            ]
+        },
+        "serverMsg/MsgGameOver/MsgGameOver": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "message",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "playerId",
                     "type": {
                         "type": "String"
                     }
