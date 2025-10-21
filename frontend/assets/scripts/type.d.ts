@@ -1,0 +1,3 @@
+interface Math {
+	randomSeed: number;
+}

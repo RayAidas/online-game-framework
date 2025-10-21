@@ -4,6 +4,7 @@ import { UserInfo } from "./UserInfo";
 export interface RoomData {
 	id: string;
 	name: string;
+	seed: number;
 	/** 房间可容纳的最大人数 */
 	maxUser: uint;
 	/** 房间内的用户 */

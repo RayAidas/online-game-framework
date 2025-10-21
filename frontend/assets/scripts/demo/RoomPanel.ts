@@ -487,6 +487,7 @@ export class RoomPanel extends Component {
 		this.setupEventListeners();
 		this.updateRoomInfo();
 		this.initFrameSync();
+		Math.randomSeed = this.currentRoomData.seed;
 	}
 
 	// 获取当前房间数据

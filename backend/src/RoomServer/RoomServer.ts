@@ -92,6 +92,7 @@ export class RoomServer {
 			ownerId: ownerId || "",
 			startMatchTime: Date.now(),
 			updateTime: Date.now(),
+			seed: +Math.random().toString().slice(2),
 		});
 
 		this.rooms.push(room);
