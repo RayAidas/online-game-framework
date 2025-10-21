@@ -1,8 +1,9 @@
-import { PrefixLogger } from "tsrpc";
+import { HttpClient, PrefixLogger } from "tsrpc";
 import { roomServer } from "../../roomServer";
 import { FrameSyncService } from "../../services/FrameSyncService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
+import { serviceProto as serviceProto_matchServer } from "../../shared/protocols/serviceProto_matchServer";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
 import { MsgSyncFrame } from "../../shared/types/FrameSync";
 import { RoomData } from "../../shared/types/RoomData";
@@ -92,6 +93,31 @@ export class Room {
 			if (!isNaN(userId)) {
 				RoomStateService.userLeaveRoom(userId);
 				this.logger.log(`[UserLeave] 清除用户 ${userId} 的房间状态`);
+
+				// 通知匹配服务器清除用户房间状态
+				try {
+					const matchClient = new HttpClient(serviceProto_matchServer, {
+						server: "http://127.0.0.1:3004",
+						logger: console,
+					});
+
+					matchClient
+						.callApi("ClearUserRoomState", {
+							userId: userId,
+						})
+						.then((result) => {
+							if (!result.isSucc) {
+								this.logger.log(`[UserLeave] 通知匹配服务器失败:`, result.err);
+							} else {
+								this.logger.log(`[UserLeave] 成功通知匹配服务器清除用户 ${userId} 的状态`);
+							}
+						})
+						.catch((err) => {
+							this.logger.log("[UserLeave] 通知匹配服务器异常:", err);
+						});
+				} catch (err) {
+					this.logger.log("[UserLeave] 创建匹配服务器客户端失败:", err);
+				}
 			}
 		}
 
