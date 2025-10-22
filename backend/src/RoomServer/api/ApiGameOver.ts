@@ -15,7 +15,6 @@ export async function ApiGameOver(call: ApiCall<ReqGameOver, ResGameOver>) {
 		return call.error("用户信息无效");
 	}
  
-	// TODO 判断游戏结束
 	room.overNum++;
 	if (room.overNum >= room.data.maxUser) {
 		room.overNum = 0;

@@ -1,6 +1,7 @@
 import { ApiCall } from "tsrpc";
 import * as uuid from "uuid";
 import { roomServer } from "../../roomServer";
+import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { ReqJoinRoom, ResJoinRoom } from "../../shared/protocols/roomServer/PtlJoinRoom";
 import { UserInfo } from "../../shared/types/UserInfo";
@@ -63,6 +64,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	room.data.users.push({
 		...currentUser,
 		color: userColor,
+		isOffline: false, // 新加入的用户默认在线
 	});
 	room.userStates[currentUser.id] = {
 		uid: currentUser.id,
@@ -84,9 +86,19 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	room.data.lastEmptyTime = undefined;
 	room.data.updateTime = Date.now();
 
-	// 记录用户房间状态
+	// 记录用户房间状态（内存）
 	if (call.currentUser) {
 		RoomStateService.userJoinRoom(call.currentUser.uid, room.data.id);
+	}
+
+	// 持久化用户房间状态到Redis
+	if (call.currentUser) {
+		await RedisRoomStateService.userJoinRoom(call.currentUser.uid, room.data.id, {
+			userId: call.currentUser.uid,
+			nickname: currentUser.nickname,
+			color: userColor,
+			isOffline: false,
+		});
 	}
 
 	call.succ({

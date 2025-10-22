@@ -1,9 +1,8 @@
-import { HttpClient, PrefixLogger } from "tsrpc";
+import { PrefixLogger } from "tsrpc";
 import { roomServer } from "../../roomServer";
 import { FrameSyncService } from "../../services/FrameSyncService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
-import { serviceProto as serviceProto_matchServer } from "../../shared/protocols/serviceProto_matchServer";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
 import { MsgSyncFrame } from "../../shared/types/FrameSync";
 import { RoomData } from "../../shared/types/RoomData";
@@ -87,37 +86,14 @@ export class Room {
 			conn.currentRoom = undefined;
 		}
 
-		// 尝试从用户ID字符串中提取数字ID来清除状态
+		// 清除用户在当前进程内存中的房间状态
+		// 注意：此方法只清理房间内部状态，不清理 Redis 和 MatchServer 状态
+		// 如果需要完全清理（如用户主动退出），应先调用 RedisRoomStateService.userLeaveRoom()
 		if (currentUser && currentUser.id) {
 			const userId = parseInt(currentUser.id);
 			if (!isNaN(userId)) {
 				RoomStateService.userLeaveRoom(userId);
-				this.logger.log(`[UserLeave] 清除用户 ${userId} 的房间状态`);
-
-				// 通知匹配服务器清除用户房间状态
-				try {
-					const matchClient = new HttpClient(serviceProto_matchServer, {
-						server: "http://127.0.0.1:3004",
-						logger: console,
-					});
-
-					matchClient
-						.callApi("ClearUserRoomState", {
-							userId: userId,
-						})
-						.then((result) => {
-							if (!result.isSucc) {
-								this.logger.log(`[UserLeave] 通知匹配服务器失败:`, result.err);
-							} else {
-								this.logger.log(`[UserLeave] 成功通知匹配服务器清除用户 ${userId} 的状态`);
-							}
-						})
-						.catch((err) => {
-							this.logger.log("[UserLeave] 通知匹配服务器异常:", err);
-						});
-				} catch (err) {
-					this.logger.log("[UserLeave] 创建匹配服务器客户端失败:", err);
-				}
+				this.logger.log(`[UserLeave] 清除用户 ${userId} 的房间内存状态`);
 			}
 		}
 

@@ -1,4 +1,4 @@
-import { _decorator, Component, EditBox } from "cc";
+import { _decorator, Component, EditBox, Node } from "cc";
 import { CurrentUser } from "db://assets/scripts/shared/models/CurrentUser";
 import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { ServiceType } from "db://assets/scripts/shared/protocols/serviceProto_userServer";
@@ -12,6 +12,7 @@ export class LoginPanel extends Component {
 	username: EditBox = null!;
 	@property(EditBox)
 	password: EditBox = null!;
+	@property(Node) matchPanel: Node = null!;
 
 	client: HttpClient<ServiceType>;
 	private currentUser: CurrentUser | null = null;
@@ -41,6 +42,7 @@ export class LoginPanel extends Component {
 		// 如果已经登录，直接返回
 		if (this.currentUser) {
 			console.log("用户已登录，跳过自动登录");
+			this.matchPanel.active = true;
 			return;
 		}
 
@@ -76,6 +78,7 @@ export class LoginPanel extends Component {
 			.then((result) => {
 				if (result.isSucc) {
 					console.log("自动登录成功！");
+					this.matchPanel.active = true;
 				} else {
 					console.log("自动登录失败:", result.err);
 					// 清除无效的 Token
@@ -102,17 +105,39 @@ export class LoginPanel extends Component {
 			return;
 		}
 
-		this.client.callApi("Login", {
-			username: this.username.string,
-			password: this.password.string,
-		});
+		this.client
+			.callApi("Login", {
+				username: this.username.string,
+				password: this.password.string,
+			})
+			.then((result) => {
+				if (result.isSucc) {
+					this.matchPanel.active = true;
+				} else {
+					console.log("登录失败:", result.err);
+				}
+			})
+			.catch((error) => {
+				console.log("登录出错:", error);
+			});
 	}
 
 	onRegister() {
-		this.client.callApi("Register", {
-			username: this.username.string,
-			password: this.password.string,
-		});
+		this.client
+			.callApi("Register", {
+				username: this.username.string,
+				password: this.password.string,
+			})
+			.then((result) => {
+				if (result.isSucc) {
+					this.matchPanel.active = true;
+				} else {
+					console.log("注册失败:", result.err);
+				}
+			})
+			.catch((error) => {
+				console.log("注册出错:", error);
+			});
 	}
 
 	onLogin() {

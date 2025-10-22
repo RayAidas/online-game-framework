@@ -3,6 +3,7 @@ import path from "path";
 import { HttpClient, WsConnection, WsServer } from "tsrpc";
 import { parseCurrentUser } from "../flows/UserFlows";
 import { BackConfig } from "../models/BackConfig";
+import { RedisRoomStateService } from "../services/RedisRoomStateService";
 import { serviceProto as serviceProto_matchServer } from "../shared/protocols/serviceProto_matchServer";
 import { serviceProto, ServiceType } from "../shared/protocols/serviceProto_roomServer";
 import { UserInfo } from "../shared/types/UserInfo";
@@ -35,6 +36,11 @@ export class RoomServer {
 		setInterval(() => {
 			this._clearIdleRooms();
 		}, 10000);
+
+		// 定时清除超时的离线用户（每分钟检查一次）
+		setInterval(() => {
+			this._clearTimeoutOfflineUsers();
+		}, 60000);
 	}
 
 	async init() {
@@ -109,6 +115,19 @@ export class RoomServer {
 			.forEach((room) => {
 				room.destroy();
 			});
+	}
+
+	/**
+	 * 清除超时的离线用户
+	 * 超过5分钟未重连的用户将被强制退出房间
+	 */
+	private async _clearTimeoutOfflineUsers() {
+		try {
+			// 清理超过5分钟未重连的用户
+			await RedisRoomStateService.cleanTimeoutOfflineUsers(5 * 60 * 1000);
+		} catch (error) {
+			this.logger.error("清理超时离线用户失败:", error);
+		}
 	}
 }
 

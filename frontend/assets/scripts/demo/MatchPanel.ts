@@ -23,7 +23,6 @@ export class MatchPanel extends Component {
 	protected onLoad(): void {
 		this.matchClient = getMatchClient();
 		this.roomClient = getRoomClient();
-
 		// 监听用户状态变化
 		userManager.onUserChange((user) => {
 			this.currentUser = user;
@@ -63,6 +62,36 @@ export class MatchPanel extends Component {
 
 			return v;
 		});
+
+		// 先连接 WebSocket，然后尝试重连房间
+		this.roomClient
+			.connect()
+			.then(() => {
+				console.log("WebSocket 连接成功，尝试重连房间");
+
+				// 尝试重新连接房间
+				this.roomClient
+					.callApi("RejoinRoom", {})
+					.then((ret) => {
+						if (ret.isSucc) {
+							console.log("重连房间成功:", ret.res.roomData);
+							// 更新房间面板
+							this.roomPanel.node.active = true;
+							this.roomPanel.setCurrentRoom(ret.res.roomData, ret.res.currentUser, this.roomClient);
+						} else {
+							console.log("重连房间失败:", ret.err);
+							// 重连失败，断开连接
+							this.roomClient.disconnect();
+						}
+					})
+					.catch((err) => {
+						console.error("重连房间出错:", err);
+						this.roomClient.disconnect();
+					});
+			})
+			.catch((err) => {
+				console.error("WebSocket 连接失败:", err);
+			});
 	}
 
 	update(deltaTime: number) {}

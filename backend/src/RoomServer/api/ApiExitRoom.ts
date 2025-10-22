@@ -1,7 +1,6 @@
-import { ApiCall, HttpClient } from "tsrpc";
-import { RoomStateService } from "../../services/RoomStateService";
+import { ApiCall } from "tsrpc";
+import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { ReqExitRoom, ResExitRoom } from "../../shared/protocols/roomServer/PtlExitRoom";
-import { serviceProto as serviceProto_matchServer } from "../../shared/protocols/serviceProto_matchServer";
 import { ColorGenerator } from "../../utils/ColorGenerator";
 import { RoomServerConn } from "../RoomServer";
 
@@ -19,30 +18,13 @@ export async function ApiExitRoom(call: ApiCall<ReqExitRoom, ResExitRoom>) {
 		}
 	}
 
-	// 清除房间服务器的用户房间状态
+	// 清除用户房间状态（Redis + 内存 + 通知 MatchServer）
 	if (userId) {
-		RoomStateService.userLeaveRoom(userId);
-	}
-
-	// 通知匹配服务器清除用户房间状态
-	if (userId) {
-		try {
-			const matchClient = new HttpClient(serviceProto_matchServer, {
-				server: "http://127.0.0.1:3004",
-				logger: console,
-			});
-
-			// 调用匹配服务器的清除状态API
-			const result = await matchClient.callApi("ClearUserRoomState", {
-				userId: userId,
-			});
-
-			if (!result.isSucc) {
-				console.error(`[ApiExitRoom] 通知匹配服务器失败:`, result.err);
-			}
-		} catch (err) {
-			console.error("[ApiExitRoom] 通知匹配服务器异常:", err);
-		}
+		// RedisRoomStateService.userLeaveRoom() 会自动：
+		// 1. 清除 Redis 中的数据
+		// 2. 清除当前进程内存中的 RoomStateService 状态
+		// 3. 通知 MatchServer 清除其进程中的状态
+		await RedisRoomStateService.userLeaveRoom(userId);
 	}
 
 	if (conn.currentRoom) {

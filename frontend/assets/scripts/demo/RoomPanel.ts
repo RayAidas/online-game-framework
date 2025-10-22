@@ -70,6 +70,18 @@ export class RoomPanel extends Component {
 			this.handleGameStarted(msg);
 		});
 
+		// 监听用户离线消息
+		this.roomClient.listenMsg("serverMsg/UserOffline", (msg) => {
+			console.log("用户离线:", msg.user);
+			this.handleUserOffline(msg);
+		});
+
+		// 监听用户上线消息
+		this.roomClient.listenMsg("serverMsg/UserOnline", (msg) => {
+			console.log("用户上线:", msg.user);
+			this.handleUserOnline(msg);
+		});
+
 		// 监听帧同步消息
 		this.roomClient.listenMsg("serverMsg/SyncFrame", (msg) => {
 			console.log("收到帧同步数据:", msg.frameIndex);
@@ -186,11 +198,25 @@ export class RoomPanel extends Component {
 				richText += "<color=#00FF00>★</color> ";
 			}
 
-			// 添加用户名(带颜色)
+			// 添加在线/离线状态标识
+			const isOffline = user.isOffline || false;
+			if (isOffline) {
+				richText += "<color=#808080>⚫</color> "; // 灰色圆点表示离线
+			} else {
+				richText += "<color=#00FF00>🟢</color> "; // 绿色圆点表示在线
+			}
+
+			// 添加用户名(带颜色，如果离线则变暗)
 			const colorHex = `${user.color.r.toString(16).padStart(2, "0")}${user.color.g.toString(16).padStart(2, "0")}${user.color.b
 				.toString(16)
 				.padStart(2, "0")}`;
-			richText += `<color=#${colorHex}>${user.nickname}</color>`;
+
+			if (isOffline) {
+				// 离线用户名字颜色变暗
+				richText += `<color=#808080>${user.nickname} (离线)</color>`;
+			} else {
+				richText += `<color=#${colorHex}>${user.nickname}</color>`;
+			}
 
 			// 添加准备状态
 			const isReady = user.isReady || false;
@@ -632,7 +658,6 @@ export class RoomPanel extends Component {
 	}
 
 	private handleChat(msg: MsgChat) {
-		console.log("收到聊天消息:", msg);
 		let item = this.createChatItem(msg);
 		this.chatListScrollView.content.addChild(item);
 		item.setPosition(0, -(this.chatListScrollView.content.children.length - 1) * 100, 0);
@@ -643,10 +668,31 @@ export class RoomPanel extends Component {
 	}
 
 	private handleGameOver(msg: any) {
-		console.log("游戏结束:", msg);
 		this.game.showOverPanel(msg.playerId);
 		this.pauseFrameSync();
 		this.game = null;
+	}
+
+	private handleUserOffline(msg: any) {
+		if (this.currentRoomData) {
+			const user = this.currentRoomData.users.find((u) => u.id === msg.user.id);
+			if (user) {
+				user.isOffline = true;
+				// 更新用户列表显示
+				this.updateUserList();
+			}
+		}
+	}
+
+	private handleUserOnline(msg: any) {
+		if (this.currentRoomData) {
+			const user = this.currentRoomData.users.find((u) => u.id === msg.user.id);
+			if (user) {
+				user.isOffline = false;
+				// 更新用户列表显示
+				this.updateUserList();
+			}
+		}
 	}
 
 	private createChatItem(msg: any): Node {

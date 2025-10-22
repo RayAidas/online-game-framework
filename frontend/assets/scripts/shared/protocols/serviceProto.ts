@@ -12,6 +12,7 @@ import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqPauseFrameSync, ResPauseFrameSync } from './roomServer/PtlPauseFrameSync';
+import { ReqRejoinRoom, ResRejoinRoom } from './roomServer/PtlRejoinRoom';
 import { ReqResumeFrameSync, ResResumeFrameSync } from './roomServer/PtlResumeFrameSync';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
@@ -23,6 +24,8 @@ import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
+import { MsgUserOffline } from './roomServer/serverMsg/MsgUserOffline';
+import { MsgUserOnline } from './roomServer/serverMsg/MsgUserOnline';
 import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
 import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
 import { ReqLogin, ResLogin } from './userServer/PtlLogin';
@@ -75,6 +78,10 @@ export interface ServiceType {
             req: ReqPauseFrameSync,
             res: ResPauseFrameSync
         },
+        "roomServer/RejoinRoom": {
+            req: ReqRejoinRoom,
+            res: ResRejoinRoom
+        },
         "roomServer/ResumeFrameSync": {
             req: ReqResumeFrameSync,
             res: ResResumeFrameSync
@@ -114,13 +121,15 @@ export interface ServiceType {
         "roomServer/serverMsg/SyncFrame": MsgSyncFrame,
         "roomServer/serverMsg/UserExit": MsgUserExit,
         "roomServer/serverMsg/UserJoin": MsgUserJoin,
+        "roomServer/serverMsg/UserOffline": MsgUserOffline,
+        "roomServer/serverMsg/UserOnline": MsgUserOnline,
         "roomServer/serverMsg/UserReadyChanged": MsgUserReadyChanged,
         "roomServer/serverMsg/UserStates": MsgUserStates
     }
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 37,
+    "version": 39,
     "services": [
         {
             "id": 31,
@@ -217,6 +226,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 44,
+            "name": "roomServer/RejoinRoom",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
             "id": 41,
             "name": "roomServer/ResumeFrameSync",
             "type": "api",
@@ -278,6 +295,16 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 20,
             "name": "roomServer/serverMsg/UserJoin",
+            "type": "msg"
+        },
+        {
+            "id": 45,
+            "name": "roomServer/serverMsg/UserOffline",
+            "type": "msg"
+        },
+        {
+            "id": 46,
+            "name": "roomServer/serverMsg/UserOnline",
             "type": "msg"
         },
         {
@@ -1011,6 +1038,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Boolean"
                     },
                     "optional": true
+                },
+                {
+                    "id": 3,
+                    "name": "isOffline",
+                    "type": {
+                        "type": "Boolean"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -1192,6 +1227,65 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Reference",
                         "target": "base/BaseResponse"
+                    }
+                }
+            ]
+        },
+        "roomServer/PtlRejoinRoom/ReqRejoinRoom": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseRequest"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "roomId",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "roomServer/PtlRejoinRoom/ResRejoinRoom": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "base/BaseResponse"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "roomData",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/RoomData/RoomData"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "currentUser",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/UserInfo/UserInfo"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "isRejoin",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]
@@ -1501,6 +1595,46 @@ export const serviceProto: ServiceProto<ServiceType> = {
                                 }
                             }
                         ]
+                    }
+                }
+            ]
+        },
+        "roomServer/serverMsg/MsgUserOffline/MsgUserOffline": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/UserInfo/UserInfo"
+                    }
+                }
+            ]
+        },
+        "roomServer/serverMsg/MsgUserOnline/MsgUserOnline": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "time",
+                    "type": {
+                        "type": "Date"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "user",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/UserInfo/UserInfo"
                     }
                 }
             ]
