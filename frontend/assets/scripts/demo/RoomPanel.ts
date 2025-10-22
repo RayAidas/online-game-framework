@@ -756,4 +756,123 @@ export class RoomPanel extends Component {
 		}
 		return false;
 	}
+
+	/**
+	 * 重连游戏 - 当用户在游戏中断线后重连
+	 * 恢复游戏界面和状态
+	 */
+	public rejoinGame() {
+		if (!this.currentRoomData || !this.game) {
+			console.log("重连游戏：创建游戏实例");
+			// 如果游戏实例不存在，创建游戏
+			if (this.gamePrefab) {
+				if (this.isFrameSyncPaused()) this.resumeFrameSync();
+				let gameNode = instantiate(this.gamePrefab);
+				this.game = gameNode.getComponent(GameBase);
+				this.game.init(this.roomClient);
+				this.node.parent.addChild(gameNode);
+
+				// 延迟创建玩家节点，等待状态同步完成后再创建
+				// 这样可以根据实际的游戏状态来创建玩家位置
+				// 先请求游戏状态和追帧数据来同步
+				this.requestGameState().then((serverState) => {
+					// 为房间内所有用户创建玩家节点
+					if (this.currentRoomData && this.currentUser) {
+						this.currentRoomData.users.forEach((user) => {
+							// 跳过离线用户
+							if (user.isOffline) return;
+
+							const isCurrentPlayer = user.id === this.currentUser!.id;
+
+							// 从服务器状态中获取玩家位置（如果有）
+							let initialPosition = undefined;
+							if (serverState && serverState.userStates && serverState.userStates[user.id]) {
+								const userState = serverState.userStates[user.id];
+								if (userState.x !== undefined && userState.y !== undefined) {
+									initialPosition = { x: userState.x, y: userState.y, z: 0 };
+								}
+							}
+
+							this.game.createPlayer(user, isCurrentPlayer, initialPosition);
+						});
+
+						// 创建玩家节点后，只应用血量等其他状态
+						// 注意：不要再次应用位置，因为 createPlayer 已经正确设置了位置
+						if (serverState && serverState.userStates) {
+							// 只更新血量，不更新位置
+							Object.keys(serverState.userStates).forEach((playerId) => {
+								const state = serverState.userStates[playerId];
+								if (state.hp !== undefined) {
+									const playerInfo = this.game.playerInfos.find((info: any) => info.playerId === playerId);
+									if (playerInfo) {
+										const hpDiff = state.hp - playerInfo.hp;
+										playerInfo.updateHp(hpDiff);
+										console.log(`重连后更新玩家 ${playerId} 血量: ${state.hp}`);
+									}
+								}
+							});
+						}
+					}
+				});
+
+				// 监听玩家输入事件
+				this.game.node.on("playerInput", (inputData: any) => {
+					this.sendInput(inputData.inputType, inputData);
+				});
+			}
+		} else {
+			console.log("重连游戏：游戏实例已存在");
+		}
+	}
+
+	/**
+	 * 请求游戏状态 - 重连时同步游戏状态和帧数据
+	 * @returns Promise<any> 返回服务器状态数据（包含 userStates）
+	 */
+	private requestGameState(): Promise<any> {
+		return new Promise((resolve, reject) => {
+			console.log("请求游戏状态和追帧数据...");
+
+			this.roomClient
+				.callApi("RequestGameState", {})
+				.then((ret) => {
+					if (ret.isSucc) {
+						console.log("收到游戏状态:");
+						console.log("  状态帧索引:", ret.res.stateFrameIndex);
+						console.log("  当前帧索引:", ret.res.currentFrameIndex);
+						console.log("  追帧数量:", ret.res.afterFrames.length);
+						console.log("  状态数据:", ret.res.stateData);
+
+						// 将状态和追帧数据应用到帧同步客户端
+						if (this.frameSyncClient) {
+							// 应用状态数据
+							if (ret.res.stateData && ret.res.stateFrameIndex >= 0) {
+								this.frameSyncClient.onSyncStateData(ret.res.stateData, ret.res.stateFrameIndex);
+								console.log("状态数据已应用到帧同步客户端");
+							}
+
+							// 如果有追帧数据，应用追帧
+							if (ret.res.afterFrames && ret.res.afterFrames.length > 0) {
+								this.frameSyncClient.onAfterFrames({
+									afterFrames: ret.res.afterFrames,
+									startFrameIndex: ret.res.startFrameIndex,
+								});
+								console.log("追帧数据已应用，开始追帧...");
+							}
+						}
+
+						console.log("游戏状态同步完成");
+						// 返回状态数据供 rejoinGame 使用
+						resolve(ret.res.stateData);
+					} else {
+						console.error("请求游戏状态失败:", ret.err);
+						reject(new Error(ret.err.message));
+					}
+				})
+				.catch((err) => {
+					console.error("请求游戏状态异常:", err);
+					reject(err);
+				});
+		});
+	}
 }

@@ -53,9 +53,11 @@ export class GameBase extends Component {
 
 	public onVisibilityChange() {}
 
-	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false) {}
+	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false, initialPosition?: any) {}
 
 	public removePlayer(playerId: string) {}
+
+	public applyServerState(userStates: any) {}
 
 	public syncFrame(connectionInput: any, operate: any) {}
 

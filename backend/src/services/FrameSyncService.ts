@@ -65,9 +65,17 @@ export class FrameSyncService {
 	/**当前帧收集的输入数据*/
 	private _currentFrameInputs: Map<string, any> = new Map();
 
-	constructor(onSyncOneFrame: (msg: MsgSyncFrame) => void, syncFrameRate: number = 60) {
+	/**状态快照更新间隔（帧数），每60帧（1秒）更新一次状态快照*/
+	private _stateSnapshotInterval = 60;
+	/**距离上次状态快照的帧数计数*/
+	private _framesSinceLastSnapshot = 0;
+	/**状态快照回调函数，用于获取当前游戏状态*/
+	private _getStateSnapshotCallback?: () => any;
+
+	constructor(onSyncOneFrame: (msg: MsgSyncFrame) => void, syncFrameRate: number = 60, getStateSnapshot?: () => any) {
 		this.onSyncOneFrame = onSyncOneFrame;
 		this._syncFrameRate = syncFrameRate;
+		this._getStateSnapshotCallback = getStateSnapshot;
 	}
 
 	/**
@@ -116,6 +124,28 @@ export class FrameSyncService {
 		this._syncOneFrameTempMsg.frameIndex = this._nextSyncFrameIndex;
 		this._syncOneFrameTempMsg.syncFrame = currentFrame;
 
+		// 保存追帧数据（用于断线重连）
+		this._afterFrames.push(currentFrame);
+
+		// 定期更新状态快照
+		this._framesSinceLastSnapshot++;
+		if (this._framesSinceLastSnapshot >= this._stateSnapshotInterval) {
+			this.updateStateSnapshot();
+			this._framesSinceLastSnapshot = 0;
+		}
+
+		// 限制追帧数量，保留最近600帧（约10秒，给断线重连留足够的时间）
+		// 当追帧数量超过限制时，更新状态快照并清理旧帧
+		if (this._afterFrames.length > 600) {
+			// 强制更新状态快照
+			this.updateStateSnapshot();
+			// 清理旧的追帧数据，只保留最近300帧
+			const framesToRemove = this._afterFrames.length - 300;
+			this._afterFrames.splice(0, framesToRemove);
+			this._lastStateDataFrameIndex += framesToRemove;
+			console.log(`[FrameSyncService] 清理了 ${framesToRemove} 个旧帧，当前状态帧索引: ${this._lastStateDataFrameIndex}`);
+		}
+
 		// 广播帧数据
 		this.onSyncOneFrame(this._syncOneFrameTempMsg);
 
@@ -156,12 +186,48 @@ export class FrameSyncService {
 	}
 
 	/**
-	 * 同步状态数据
+	 * 同步状态数据（外部调用）
 	 */
 	syncStateData(stateData: any, frameIndex: number) {
 		this._lastStateData = stateData;
 		this._lastStateDataFrameIndex = frameIndex;
-		console.log(`同步状态数据，帧索引: ${frameIndex}`);
+		console.log(`[FrameSyncService] 外部同步状态数据，帧索引: ${frameIndex}`);
+	}
+
+	/**
+	 * 更新状态快照（内部自动调用）
+	 * 定期保存游戏状态，确保断线重连时不会丢失重要数据
+	 */
+	private updateStateSnapshot() {
+		if (this._getStateSnapshotCallback) {
+			try {
+				const snapshot = this._getStateSnapshotCallback();
+				if (snapshot) {
+					this._lastStateData = snapshot;
+					this._lastStateDataFrameIndex = this._nextSyncFrameIndex - 1;
+					console.log(`[FrameSyncService] 自动更新状态快照，帧索引: ${this._lastStateDataFrameIndex}`);
+				}
+			} catch (error) {
+				console.error("[FrameSyncService] 更新状态快照失败:", error);
+			}
+		} else {
+			console.warn("[FrameSyncService] 未设置状态快照回调函数，无法自动保存状态");
+		}
+	}
+
+	/**
+	 * 设置状态快照回调函数
+	 */
+	setStateSnapshotCallback(callback: () => any) {
+		this._getStateSnapshotCallback = callback;
+	}
+
+	/**
+	 * 设置状态快照更新间隔（帧数）
+	 */
+	setStateSnapshotInterval(frames: number) {
+		this._stateSnapshotInterval = Math.max(30, frames); // 最少30帧（0.5秒）
+		console.log(`[FrameSyncService] 状态快照间隔设置为: ${this._stateSnapshotInterval} 帧`);
 	}
 
 	/**

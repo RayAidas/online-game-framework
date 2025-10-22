@@ -1,6 +1,7 @@
 import { WsServer } from "tsrpc";
 import { roomServer } from "../../../roomServer";
 import { RedisRoomStateService } from "../../../services/RedisRoomStateService";
+import { GamePhase } from "../../../shared/types/GamePhase";
 import { RoomServerConn } from "../../RoomServer";
 
 /** MatchServer 断开后清理 */
@@ -33,6 +34,19 @@ export function useCleanConn(server: WsServer<any>) {
 					const userInRoom = room.data.users.find((u) => u.id === conn.currentUser.id);
 					if (userInRoom) {
 						userInRoom.isOffline = true;
+
+						// 如果在准备阶段掉线，自动取消准备状态
+						if (room.data.gamePhase === GamePhase.WAITING && userInRoom.isReady) {
+							userInRoom.isReady = false;
+							console.log(`用户 ${userId} (${conn.currentUser.nickname}) 在准备阶段掉线，已自动取消准备状态`);
+
+							// 广播准备状态变化，让其他玩家看到
+							room.broadcastMsg("serverMsg/UserReadyChanged", {
+								time: new Date(),
+								user: conn.currentUser,
+								isReady: false,
+							});
+						}
 					}
 
 					room.broadcastMsg("serverMsg/UserOffline", {

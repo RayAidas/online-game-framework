@@ -1,4 +1,5 @@
 import { uint } from "tsrpc-proto";
+import { GamePhase } from "./GamePhase";
 import { UserInfo } from "./UserInfo";
 
 export interface RoomData {
@@ -17,6 +18,11 @@ export interface RoomData {
 		time: Date;
 		content: string;
 	}[];
+
+	/**
+	 * 游戏阶段状态
+	 */
+	gamePhase: GamePhase;
 
 	/**
 	 * 上一次空房的时间（undefined 代表房内有人）

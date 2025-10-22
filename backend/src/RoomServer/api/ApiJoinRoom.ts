@@ -66,21 +66,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 		color: userColor,
 		isOffline: false, // 新加入的用户默认在线
 	});
-	room.userStates[currentUser.id] = {
-		uid: currentUser.id,
-		pos: {
-			x: Math.random() * 10,
-			y: 0,
-			z: Math.random() * 10,
-		},
-		rotation: {
-			x: 0,
-			y: 0,
-			z: 0,
-			w: 1,
-		},
-		aniState: "idle",
-	};
+	room.userStates[currentUser.id] = {};
 	conn.currentRoom = room;
 	room.listenMsgs(conn);
 	room.data.lastEmptyTime = undefined;

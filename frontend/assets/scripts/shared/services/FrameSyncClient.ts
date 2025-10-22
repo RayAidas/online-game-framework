@@ -39,6 +39,10 @@ export class FrameSyncClient {
 	executeNextFrameTimerHD: any = 0;
 	connect: IFrameSyncConnect;
 
+	/**
+	 * 同步状态数据回调
+	 * 同时也是公开方法，允许外部调用（用于断线重连时应用服务端状态）
+	 */
 	public onSyncStateData: (stateData: any, stateFrameIndex: number) => void;
 	public onExecFrame: (dt: number, frameIndex: number) => void;
 	public getSyncState?: () => any;
@@ -123,8 +127,9 @@ export class FrameSyncClient {
 
 	/**
 	 * 处理追帧消息
+	 * 公开方法，允许外部调用（用于断线重连）
 	 */
-	private onAfterFrames(msg: MsgAfterFrames) {
+	public onAfterFrames(msg: MsgAfterFrames) {
 		// 清空当前追帧列表
 		this.afterFrames = [];
 
@@ -134,6 +139,8 @@ export class FrameSyncClient {
 
 		// 更新执行帧索引
 		this.executeFrameIndex = msg.startFrameIndex - 1;
+
+		console.log(`[FrameSyncClient] 接收追帧数据: ${msg.afterFrames.length} 帧, 起始帧索引: ${msg.startFrameIndex}`);
 
 		// 开始执行帧
 		this.startExecuteFrame();

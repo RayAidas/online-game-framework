@@ -41,6 +41,9 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 				// 设置游戏开始时间
 				room.data.startMatchTime = Date.now();
 
+				// 更新游戏阶段为游戏中
+				room.data.gamePhase = "PLAYING" as any;
+
 				// 广播游戏开始消息
 				room.broadcastMsg("serverMsg/GameStarted", {
 					time: new Date(),

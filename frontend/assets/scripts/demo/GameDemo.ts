@@ -32,6 +32,8 @@ export class GameDemo extends GameBase {
 	private pressedKeys: Set<KeyCode> = new Set();
 	private lastMoveTime: number = 0;
 	private bullets: Node[] = [];
+	private lastStateReportTime: number = 0;
+	private stateReportInterval: number = 100; // 每100ms上报一次游戏状态
 
 	start() {
 		this.setupKeyboardInput();
@@ -178,7 +180,7 @@ export class GameDemo extends GameBase {
 	/**
 	 * 创建玩家节点
 	 */
-	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false): Node {
+	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false, initialPosition?: Vec3): Node {
 		let playerNode: Node;
 		let playerId = user.id;
 		let color = user.color;
@@ -207,15 +209,27 @@ export class GameDemo extends GameBase {
 			playerNode.setScale(0.5, 0.5, 1);
 		}
 
-		// 根据是否为当前玩家设置初始位置
-		// 所有玩家都从下方开始，其他玩家通过坐标转换显示在上方
-		const initialY = -200; // 所有玩家都从下方开始
-		playerNode.setPosition(0, initialY, 0);
+		// 设置初始位置
+		let position: Vec3;
+		if (initialPosition) {
+			// 如果提供了初始位置（重连时从服务器状态恢复），使用该位置
+			// 注意：initialPosition 是普通对象 { x, y, z }，需要转换为 Vec3
+			position = new Vec3(initialPosition.x, initialPosition.y, initialPosition.z || 0);
+			console.log(`玩家 ${playerId} 使用服务器位置: (${position.x}, ${position.y})`);
+		} else {
+			// 否则使用默认初始位置
+			position = new Vec3(0, -200, 0);
+		}
 
-		// 如果不是当前玩家，立即应用坐标转换显示在上方
+		// 应用位置（对于其他玩家需要坐标转换）
+		// 注意：position 是服务器坐标，需要转换为显示坐标
 		if (!isCurrentPlayer) {
-			const transformedPos = this.transformPositionForDisplay(playerId, new Vec3(0, initialY, 0));
+			const transformedPos = this.transformPositionForDisplay(playerId, position);
 			playerNode.setPosition(transformedPos);
+			console.log(`其他玩家 ${playerId} 位置转换: 服务器(${position.x}, ${position.y}) -> 显示(${transformedPos.x}, ${transformedPos.y})`);
+		} else {
+			playerNode.setPosition(position);
+			console.log(`当前玩家 ${playerId} 位置: (${position.x}, ${position.y})`);
 		}
 
 		// 添加到玩家容器
@@ -252,6 +266,48 @@ export class GameDemo extends GameBase {
 	}
 
 	/**
+	 * 应用服务器状态数据（重连时使用）
+	 * @param userStates 服务器保存的所有玩家状态
+	 */
+	public applyServerState(userStates: any) {
+		if (!userStates) {
+			console.log("没有服务器状态数据可应用");
+			return;
+		}
+
+		console.log("应用服务器状态数据:", userStates);
+
+		// 更新所有玩家的位置和血量
+		Object.keys(userStates).forEach((playerId) => {
+			const state = userStates[playerId];
+
+			// 更新玩家位置
+			if (state.x !== undefined && state.y !== undefined) {
+				const playerNode = this.players.get(playerId);
+				if (playerNode) {
+					const serverPosition = new Vec3(state.x, state.y, 0);
+					// 应用坐标转换
+					const displayPosition = this.transformPositionForDisplay(playerId, serverPosition);
+					playerNode.setPosition(displayPosition);
+					console.log(`玩家 ${playerId} 位置已更新: (${state.x}, ${state.y})`);
+				}
+			}
+
+			// 更新玩家血量
+			if (state.hp !== undefined) {
+				const playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
+				if (playerInfo) {
+					const hpDiff = state.hp - playerInfo.hp;
+					playerInfo.updateHp(hpDiff);
+					console.log(`玩家 ${playerId} 血量已更新: ${state.hp}`);
+				}
+			}
+		});
+
+		console.log("服务器状态应用完成");
+	}
+
+	/**
 	 * 更新玩家位置
 	 */
 	public updatePlayerPosition(playerId: string, position: Vec3) {
@@ -266,27 +322,27 @@ export class GameDemo extends GameBase {
 	/**
 	 * 坐标转换：确保每个客户端看到的其他玩家都在屏幕上方
 	 * @param playerId 玩家ID
-	 * @param position 原始位置
-	 * @returns 转换后的位置
+	 * @param position 服务器坐标（原始位置）
+	 * @returns 转换后的显示坐标
 	 */
 	private transformPositionForDisplay(playerId: string, position: Vec3): Vec3 {
 		// 如果这是当前玩家，直接返回原位置（当前玩家在下方）
-		if (this.currentPlayer && this.players.get(playerId) === this.currentPlayer) {
-			return position;
+		// 使用 playerId 比较更可靠，避免对象引用问题
+		if (playerId === this.currentPlayerId) {
+			return position.clone();
 		}
 
 		// 对于其他玩家，将Y坐标转换到屏幕上方
-		// 服务器坐标：当前玩家的真实位置在下方（Y < 0）
-		// 客户端显示：其他玩家在上方（Y > 0）
-		// 转换规则：将下方坐标转换为上方坐标，保持与初始位置一致
-		let displayY = position.y;
+		// 服务器坐标：所有玩家的真实位置在下方（Y < 0）
+		// 客户端显示：
+		//   - 当前玩家：直接使用服务器坐标（Y < 0，在下方）
+		//   - 其他玩家：镜像转换（Y > 0，在上方）
+		// 转换规则：Y_display = -Y_server + 200，X_display = -X_server
+		// 例如：服务器 (-100, -200) → 显示 (100, 400)
+		const displayX = -position.x;
+		const displayY = -position.y + 200;
 
-		// 将下方坐标转换为上方坐标
-		// 使用简单的镜像转换：Y = -position.y + 200
-		// 这样 -200 变成 400，-100 变成 300，-300 变成 500
-		displayY = -position.y + 200;
-
-		return new Vec3(-position.x, displayY, position.z);
+		return new Vec3(displayX, displayY, position.z);
 	}
 
 	/**
@@ -328,7 +384,7 @@ export class GameDemo extends GameBase {
 	 * @param playerId 被击中的玩家ID
 	 */
 	public beHit(playerId: string, bulletId?: string) {
-		if(this.isGameOver) return;
+		if (this.isGameOver) return;
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
 		if (playerInfo) {
 			playerInfo.updateHp(-10);
@@ -355,6 +411,9 @@ export class GameDemo extends GameBase {
 
 		// 处理子弹移动
 		this.updateBullets(deltaTime);
+
+		// 定期上报游戏状态到服务器（关键：包含所有玩家的状态）
+		this.reportGameState();
 	}
 
 	/**
@@ -368,15 +427,26 @@ export class GameDemo extends GameBase {
 				this.bullets.splice(i, 1);
 			}
 		}
+
+		// 改为检测自己的子弹是否击中其他玩家（重要：确保掉线玩家也能被击中）
 		this.bullets
-			.filter((e) => e.getComponent(Bullet)?.ownerId !== this.currentPlayerId)
+			.filter((e) => e.getComponent(Bullet)?.ownerId === this.currentPlayerId)
 			.forEach((e) => {
 				let bullet = e.getComponent(Bullet);
-				if (getDistance(bullet.node.getPosition(), this.currentPlayer.getPosition()) < 50) {
-					bullet.destroyBullet();
-					this.beHit(this.currentPlayerId);
-					this.sendPlayerBeHitInput(this.currentPlayerId, bullet.bulletId);
-				}
+				// 检测是否击中其他玩家
+				this.players.forEach((playerNode, playerId) => {
+					// 跳过自己
+					if (playerId === this.currentPlayerId) return;
+
+					// 检测碰撞
+					if (getDistance(bullet.node.getPosition(), playerNode.getPosition()) < 50) {
+						bullet.destroyBullet();
+						// 本地立即更新被击中玩家的血量
+						this.beHit(playerId, bullet.bulletId);
+						// 发送"玩家X被击中"的帧数据（而不是"我受伤"）
+						this.sendPlayerBeHitInput(playerId, bullet.bulletId);
+					}
+				});
 			});
 	}
 
@@ -435,6 +505,7 @@ export class GameDemo extends GameBase {
 	backHome() {
 		this.overPanel.active = false;
 		super.backHome();
+		this.roomClient.callApi("ExitGame", {});
 	}
 
 	/**
@@ -470,6 +541,48 @@ export class GameDemo extends GameBase {
 			}
 		});
 		this.bullets = [];
+	}
+
+	/**
+	 * 定期上报游戏状态到服务器
+	 * 重要：每个在线玩家都会上报自己看到的所有玩家状态
+	 * 服务器会合并多个客户端的状态数据，确保掉线玩家的状态也能被记录
+	 */
+	private reportGameState() {
+		const currentTime = Date.now();
+		if (currentTime - this.lastStateReportTime < this.stateReportInterval) {
+			return;
+		}
+
+		if (!this.roomClient || this.isGameOver) {
+			return;
+		}
+
+		// 收集所有玩家的状态（包括掉线玩家）
+		const allPlayersState: any = {};
+
+		this.playerInfos.forEach((playerInfo) => {
+			if (playerInfo.playerId) {
+				const playerNode = this.players.get(playerInfo.playerId);
+				if (playerNode) {
+					const pos = playerNode.getPosition();
+					allPlayersState[playerInfo.playerId] = {
+						id: this.currentPlayerId,
+						hp: playerInfo.hp,
+						x: pos.x,
+						y: pos.y,
+						timestamp: currentTime,
+					};
+				}
+			}
+		});
+
+		// 发送消息到服务器
+		this.roomClient.sendMsg("clientMsg/UserState", {
+			states: allPlayersState,
+		});
+
+		this.lastStateReportTime = currentTime;
 	}
 
 	/** -------------------事件发送------------------- */
@@ -528,8 +641,10 @@ export class GameDemo extends GameBase {
 			this.createPlayerBullet(connectionInput.connectionId, new Vec3(operate.x, operate.y, 0), operate.bulletId);
 		}
 		if (operate.inputType === "BeHit") {
-			console.log("Input:", "behit");
-			this.beHit(connectionInput.connectionId, operate.bulletId);
+			// operate.playerId 是被击中的玩家ID（由发射子弹的玩家发送）
+			// connectionInput.connectionId 是发射子弹的玩家ID
+			console.log(`玩家 ${operate.playerId} 被玩家 ${connectionInput.connectionId} 击中`);
+			this.beHit(operate.playerId, operate.bulletId);
 		}
 	}
 }

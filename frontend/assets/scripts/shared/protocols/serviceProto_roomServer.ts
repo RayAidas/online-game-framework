@@ -3,11 +3,13 @@ import { MsgUpdateRoomState } from './roomServer/clientMsg/MsgUpdateRoomState';
 import { MsgUserState } from './roomServer/clientMsg/MsgUserState';
 import { ReqAuth, ResAuth } from './roomServer/PtlAuth';
 import { ReqCreateRoom, ResCreateRoom } from './roomServer/PtlCreateRoom';
+import { ReqExitGame, ResExitGame } from './roomServer/PtlExitGame';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqPauseFrameSync, ResPauseFrameSync } from './roomServer/PtlPauseFrameSync';
 import { ReqRejoinRoom, ResRejoinRoom } from './roomServer/PtlRejoinRoom';
+import { ReqRequestGameState, ResRequestGameState } from './roomServer/PtlRequestGameState';
 import { ReqResumeFrameSync, ResResumeFrameSync } from './roomServer/PtlResumeFrameSync';
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
@@ -34,6 +36,10 @@ export interface ServiceType {
             req: ReqCreateRoom,
             res: ResCreateRoom
         },
+        "ExitGame": {
+            req: ReqExitGame,
+            res: ResExitGame
+        },
         "ExitRoom": {
             req: ReqExitRoom,
             res: ResExitRoom
@@ -53,6 +59,10 @@ export interface ServiceType {
         "RejoinRoom": {
             req: ReqRejoinRoom,
             res: ResRejoinRoom
+        },
+        "RequestGameState": {
+            req: ReqRequestGameState,
+            res: ResRequestGameState
         },
         "ResumeFrameSync": {
             req: ReqResumeFrameSync,
@@ -89,7 +99,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 18,
+    "version": 20,
     "services": [
         {
             "id": 11,
@@ -113,6 +123,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 13,
             "name": "CreateRoom",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
+            "id": 29,
+            "name": "ExitGame",
             "type": "api",
             "conf": {
                 "needLogin": true
@@ -153,6 +171,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 26,
             "name": "RejoinRoom",
+            "type": "api",
+            "conf": {
+                "needLogin": true
+            }
+        },
+        {
+            "id": 30,
+            "name": "RequestGameState",
             "type": "api",
             "conf": {
                 "needLogin": true
@@ -317,141 +343,32 @@ export const serviceProto: ServiceProto<ServiceType> = {
             ]
         },
         "clientMsg/MsgUserState/MsgUserState": {
-            "target": {
-                "type": "Reference",
-                "target": "../../types/RoomUserState/RoomUserState"
-            },
-            "keys": [
-                "uid"
-            ],
-            "type": "Omit"
-        },
-        "../../types/RoomUserState/RoomUserState": {
             "type": "Interface",
             "properties": [
                 {
                     "id": 0,
-                    "name": "uid",
-                    "type": {
-                        "type": "String"
-                    }
-                },
-                {
-                    "id": 1,
-                    "name": "pos",
+                    "name": "states",
                     "type": {
                         "type": "Interface",
-                        "properties": [
-                            {
-                                "id": 0,
-                                "name": "x",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            },
-                            {
-                                "id": 1,
-                                "name": "y",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            },
-                            {
-                                "id": 2,
-                                "name": "z",
-                                "type": {
-                                    "type": "Number"
-                                }
+                        "indexSignature": {
+                            "keyType": "String",
+                            "type": {
+                                "type": "Reference",
+                                "target": "../../types/RoomUserState/RoomUserState"
                             }
-                        ]
-                    }
-                },
-                {
-                    "id": 2,
-                    "name": "rotation",
-                    "type": {
-                        "type": "Interface",
-                        "properties": [
-                            {
-                                "id": 0,
-                                "name": "x",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            },
-                            {
-                                "id": 1,
-                                "name": "y",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            },
-                            {
-                                "id": 2,
-                                "name": "z",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            },
-                            {
-                                "id": 3,
-                                "name": "w",
-                                "type": {
-                                    "type": "Number"
-                                }
-                            }
-                        ]
-                    }
-                },
-                {
-                    "id": 3,
-                    "name": "aniState",
-                    "type": {
-                        "type": "Reference",
-                        "target": "../../types/RoomUserState/PlayerAniState"
+                        }
                     }
                 }
             ]
         },
-        "../../types/RoomUserState/PlayerAniState": {
-            "type": "Union",
-            "members": [
-                {
-                    "id": 0,
-                    "type": {
-                        "type": "Literal",
-                        "literal": "idle"
-                    }
-                },
-                {
-                    "id": 1,
-                    "type": {
-                        "type": "Literal",
-                        "literal": "walking"
-                    }
-                },
-                {
-                    "id": 2,
-                    "type": {
-                        "type": "Literal",
-                        "literal": "wave"
-                    }
-                },
-                {
-                    "id": 3,
-                    "type": {
-                        "type": "Literal",
-                        "literal": "punch"
-                    }
-                },
-                {
-                    "id": 4,
-                    "type": {
-                        "type": "Literal",
-                        "literal": "dance"
-                    }
+        "../../types/RoomUserState/RoomUserState": {
+            "type": "Interface",
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
                 }
-            ]
+            }
         },
         "PtlAuth/ReqAuth": {
             "type": "Interface",
@@ -565,6 +482,30 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "roomId",
                     "type": {
                         "type": "String"
+                    }
+                }
+            ]
+        },
+        "PtlExitGame/ReqExitGame": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
+        },
+        "PtlExitGame/ResExitGame": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
                     }
                 }
             ]
@@ -853,6 +794,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 },
                 {
+                    "id": 10,
+                    "name": "gamePhase",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/GamePhase/GamePhase"
+                    }
+                },
+                {
                     "id": 5,
                     "name": "lastEmptyTime",
                     "type": {
@@ -874,6 +823,23 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Number"
                     }
+                }
+            ]
+        },
+        "../../types/GamePhase/GamePhase": {
+            "type": "Enum",
+            "members": [
+                {
+                    "id": 0,
+                    "value": "WAITING"
+                },
+                {
+                    "id": 1,
+                    "value": "PLAYING"
+                },
+                {
+                    "id": 2,
+                    "value": "FINISHED"
                 }
             ]
         },
@@ -957,8 +923,141 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Boolean"
                     }
+                },
+                {
+                    "id": 3,
+                    "name": "gamePhase",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/GamePhase/GamePhase"
+                    }
                 }
             ]
+        },
+        "PtlRequestGameState/ReqRequestGameState": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseRequest"
+                    }
+                }
+            ]
+        },
+        "PtlRequestGameState/ResRequestGameState": {
+            "type": "Interface",
+            "extends": [
+                {
+                    "id": 0,
+                    "type": {
+                        "type": "Reference",
+                        "target": "../base/BaseResponse"
+                    }
+                }
+            ],
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "stateData",
+                    "type": {
+                        "type": "Any"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "stateFrameIndex",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "afterFrames",
+                    "type": {
+                        "type": "Array",
+                        "elementType": {
+                            "type": "Reference",
+                            "target": "../../types/FrameSync/GameSyncFrame"
+                        }
+                    }
+                },
+                {
+                    "id": 3,
+                    "name": "startFrameIndex",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 4,
+                    "name": "currentFrameIndex",
+                    "type": {
+                        "type": "Number"
+                    }
+                }
+            ]
+        },
+        "../../types/FrameSync/GameSyncFrame": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "connectionInputs",
+                    "type": {
+                        "type": "Array",
+                        "elementType": {
+                            "type": "Reference",
+                            "target": "../../types/FrameSync/ConnectionInputFrame"
+                        }
+                    }
+                }
+            ],
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
+                }
+            }
+        },
+        "../../types/FrameSync/ConnectionInputFrame": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "connectionId",
+                    "type": {
+                        "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "operates",
+                    "type": {
+                        "type": "Array",
+                        "elementType": {
+                            "type": "Reference",
+                            "target": "../../types/FrameSync/ConnectionInputOperate"
+                        }
+                    }
+                }
+            ],
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
+                }
+            }
+        },
+        "../../types/FrameSync/ConnectionInputOperate": {
+            "type": "Interface",
+            "indexSignature": {
+                "keyType": "String",
+                "type": {
+                    "type": "Any"
+                }
+            }
         },
         "PtlResumeFrameSync/ReqResumeFrameSync": {
             "type": "Interface",
@@ -1041,15 +1140,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 }
             ]
-        },
-        "../../types/FrameSync/ConnectionInputOperate": {
-            "type": "Interface",
-            "indexSignature": {
-                "keyType": "String",
-                "type": {
-                    "type": "Any"
-                }
-            }
         },
         "PtlSendInput/ResSendInput": {
             "type": "Interface",

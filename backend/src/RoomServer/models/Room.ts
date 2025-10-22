@@ -17,12 +17,14 @@ export class Room {
 	} = {};
 	logger: PrefixLogger;
 	overNum: number = 0;
+	finishNum: number = 0;
 	/**帧同步服务*/
 	private frameSyncService: FrameSyncService | null = null;
 
 	constructor(data: RoomData) {
 		this.data = data;
 		this.overNum = 0;
+		this.finishNum = 0;
 		this.logger = new PrefixLogger({
 			logger: roomServer.logger,
 			prefixs: [`[Room ${data.id}]`],
@@ -57,10 +59,45 @@ export class Room {
 	listenMsgs(conn: RoomServerConn) {
 		conn.listenMsg("clientMsg/UserState", (call) => {
 			const conn = call.conn as RoomServerConn;
-			this.userStates[conn.currentUser.id] = {
-				uid: conn.currentUser.id,
-				...call.msg,
-			};
+			// 接收客户端上报的所有玩家状态
+			// 每个在线客户端都会上报自己看到的所有玩家状态
+			// 服务器合并这些数据，确保即使玩家掉线，其状态也能被其他在线玩家更新
+			if (call.msg.states) {
+				Object.keys(call.msg.states).forEach((playerId) => {
+					const state = call.msg.states[playerId];
+
+					// 坐标转换逻辑：
+					// - state.id 表示上报者的视角（当前玩家ID）
+					// - playerId 表示被上报的玩家ID
+					// - 如果 state.id === playerId，说明是上报自己的位置，坐标是服务器坐标（Y < 0）
+					// - 如果 state.id !== playerId，说明是上报其他玩家的位置，坐标是显示坐标（Y > 0），需要转换
+					let serverX = state.x;
+					let serverY = state.y;
+
+					if (state.id && state.id !== playerId) {
+						// 其他玩家的显示坐标需要转换回服务器坐标
+						// 显示坐标 → 服务器坐标转换规则：
+						// serverX = -displayX
+						// serverY = -(displayY - 200)
+						// 例如：显示 (100, 400) → 服务器 (-100, -200)
+						serverX = -state.x;
+						serverY = -(state.y - 200);
+						// console.log(`[坐标转换] 玩家 ${playerId} 从视角 ${state.id}: 显示(${state.x}, ${state.y}) → 服务器(${serverX}, ${serverY})`);
+					}
+
+					// 使用最新的时间戳来决定是否更新状态
+					const existingState = this.userStates[playerId];
+					if (!existingState || !existingState.timestamp || state.timestamp >= existingState.timestamp) {
+						this.userStates[playerId] = {
+							...state,
+							x: serverX,
+							y: serverY,
+							// 移除 id 字段，因为服务器不需要保存视角信息
+							id: undefined,
+						};
+					}
+				});
+			}
 		});
 	}
 	unlistenMsgs(conn: RoomServerConn) {
@@ -166,11 +203,44 @@ export class Room {
 				// 广播帧数据给房间内所有连接
 				this.broadcastMsg("serverMsg/SyncFrame", msg);
 			},
-			60 // 60fps
+			60, // 60fps
+			() => {
+				// 状态快照回调函数 - 返回当前游戏状态
+				// 这里需要收集房间内所有重要的游戏状态
+				return this.getGameStateSnapshot();
+			}
 		);
 
+		// 设置状态快照间隔为60帧（1秒更新一次）
+		this.frameSyncService.setStateSnapshotInterval(60);
+
 		this.frameSyncService.startSyncFrame();
-		this.logger.log("[FrameSync] 帧同步已启动");
+		this.logger.log("[FrameSync] 帧同步已启动，状态快照间隔: 1秒");
+	}
+
+	/**
+	 * 获取游戏状态快照
+	 * 返回当前房间的完整游戏状态，用于断线重连
+	 */
+	private getGameStateSnapshot(): any {
+		return {
+			timestamp: Date.now(),
+			frameIndex: this.frameSyncService?.getCurrentFrameIndex() || 0,
+			roomData: {
+				id: this.data.id,
+				gamePhase: this.data.gamePhase,
+				users: this.data.users.map((user) => ({
+					id: user.id,
+					nickname: user.nickname,
+					isReady: user.isReady,
+					isOffline: user.isOffline,
+					color: user.color,
+				})),
+			},
+			// 保存所有用户的游戏状态（位置、血量等）
+			userStates: { ...this.userStates },
+			// 其他游戏相关状态可以在这里添加
+		};
 	}
 
 	/**

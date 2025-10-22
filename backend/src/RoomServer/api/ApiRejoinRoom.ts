@@ -62,12 +62,7 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 
 		// 恢复用户状态
 		if (!room.userStates[currentUser.id]) {
-			room.userStates[currentUser.id] = {
-				uid: currentUser.id,
-				pos: { x: 0, y: 0, z: 0 },
-				rotation: { x: 0, y: 0, z: 0, w: 1 },
-				aniState: "idle",
-			};
+			room.userStates[currentUser.id] = {};
 		}
 	} else {
 		// 用户不在房间中，重新加入
@@ -85,12 +80,7 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 			...currentUser,
 			color: roomInfo.color || { r: 255, g: 255, b: 255 },
 		});
-		room.userStates[currentUser.id] = {
-			uid: currentUser.id,
-			pos: { x: Math.random() * 10, y: 0, z: Math.random() * 10 },
-			rotation: { x: 0, y: 0, z: 0, w: 1 },
-			aniState: "idle",
-		};
+		room.userStates[currentUser.id] = {};
 		conn.currentRoom = room;
 		room.listenMsgs(conn);
 	}
@@ -108,6 +98,7 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 		roomData: room.data,
 		currentUser: currentUser,
 		isRejoin: existingUser !== undefined,
+		gamePhase: room.data.gamePhase, // 返回当前游戏阶段
 	});
 
 	// 如果是重连，广播用户重新上线消息
