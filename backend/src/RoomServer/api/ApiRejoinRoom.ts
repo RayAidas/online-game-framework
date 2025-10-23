@@ -5,6 +5,7 @@ import { RoomStateService } from "../../services/RoomStateService";
 import { ReqRejoinRoom, ResRejoinRoom } from "../../shared/protocols/roomServer/PtlRejoinRoom";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { RoomServerConn } from "../RoomServer";
+import { GamePhase } from "../../shared/types/GamePhase";
 
 export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>) {
 	if (!call.currentUser) {
@@ -33,6 +34,7 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 	const currentUser: UserInfo = {
 		id: call.currentUser.uid.toString(),
 		nickname: roomInfo.nickname || "玩家",
+		gamePhase: roomInfo.gamePhase || GamePhase.WAITING,
 	};
 	conn.currentUser = currentUser;
 
@@ -98,7 +100,6 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 		roomData: room.data,
 		currentUser: currentUser,
 		isRejoin: existingUser !== undefined,
-		gamePhase: room.data.gamePhase, // 返回当前游戏阶段
 	});
 
 	// 如果是重连，广播用户重新上线消息

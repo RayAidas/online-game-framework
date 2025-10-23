@@ -7,6 +7,7 @@ import { HttpClient, WsClient } from "tsrpc-browser";
 import { getMatchClient } from "../getMatchClient";
 import { getRoomClient } from "../getRoomClient";
 import { RoomPanel } from "./RoomPanel";
+import { GamePhase } from "../shared/types/GamePhase";
 const { ccclass, property } = _decorator;
 
 @ccclass("MatchPanel")
@@ -75,26 +76,19 @@ export class MatchPanel extends Component {
 					.then((ret) => {
 						if (ret.isSucc) {
 							console.log("重连房间成功:", ret.res.roomData);
-							console.log("游戏阶段:", ret.res.gamePhase);
+							console.log("游戏阶段:", ret.res.currentUser.gamePhase);
 
 							// 更新房间面板
 							this.roomPanel.node.active = true;
 							this.roomPanel.setCurrentRoom(ret.res.roomData, ret.res.currentUser, this.roomClient);
 
 							// 根据游戏阶段决定显示哪个页面
-							if (ret.res.gamePhase === "PLAYING") {
+							if (ret.res.currentUser.gamePhase === GamePhase.PLAYING || ret.res.currentUser.gamePhase === GamePhase.FINISHED) {
 								// 游戏进行中，直接进入游戏界面
 								console.log("游戏进行中，恢复游戏状态");
+								this.roomPanel.node.active = true;
 								this.roomPanel.rejoinGame();
-							} else if (ret.res.gamePhase === "FINISHED") {
-								// 游戏已结束，显示结果页面
-								console.log("游戏已结束，显示结果");
-							} else {
-								// 准备阶段，显示房间准备界面
-								console.log("准备阶段，显示房间");
 							}
-
-							this.node.active = false;
 						} else {
 							console.log("重连房间失败:", ret.err);
 							// 重连失败，断开连接

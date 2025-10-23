@@ -7,6 +7,7 @@ import { ReqJoinRoom, ResJoinRoom } from "../../shared/protocols/roomServer/PtlJ
 import { UserInfo } from "../../shared/types/UserInfo";
 import { ColorGenerator } from "../../utils/ColorGenerator";
 import { RoomServerConn } from "../RoomServer";
+import { GamePhase } from "../../shared/types/GamePhase";
 
 export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	// 检查用户是否已经在房间中
@@ -28,6 +29,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	const currentUser: UserInfo = {
 		id: call.currentUser ? call.currentUser.uid.toString() : uuid.v4(),
 		nickname: call.req.nickname,
+		gamePhase: GamePhase.WAITING,
 	};
 
 	// 使用颜色生成器生成用户颜色
@@ -84,6 +86,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 			nickname: currentUser.nickname,
 			color: userColor,
 			isOffline: false,
+			gamePhase: currentUser.gamePhase,
 		});
 	}
 

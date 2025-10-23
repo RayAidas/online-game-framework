@@ -1,7 +1,9 @@
 import { HttpClient } from "tsrpc";
 import { redisClient } from "../models/Database";
 import { serviceProto as serviceProto_matchServer } from "../shared/protocols/serviceProto_matchServer";
+import { UserInfo } from "../shared/types/UserInfo";
 import { RoomStateService } from "./RoomStateService";
+import { GamePhase } from "../shared/types/GamePhase";
 
 /**
  * Redis房间状态服务
@@ -244,6 +246,20 @@ export class RedisRoomStateService {
 			}
 		} catch (error) {
 			console.error(`[Redis] 标记用户在线失败:`, error);
+		}
+	}
+
+	static async updateUserGamePhase(userId: number, gamePhase: GamePhase) {
+		try {
+			const userKey = `${this.USER_ROOM_PREFIX}${userId}`;
+			const userData = await redisClient.get(userKey);
+			if (userData) {
+				const data = JSON.parse(userData);
+				data.gamePhase = gamePhase;
+				await redisClient.setEx(userKey, this.DEFAULT_TTL, JSON.stringify(data));
+			}
+		} catch (error) {
+			console.error(`[Redis] 更新用户游戏阶段失败:`, error);
 		}
 	}
 

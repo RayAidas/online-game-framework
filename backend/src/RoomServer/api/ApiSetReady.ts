@@ -1,5 +1,7 @@
 import { ApiCall } from "tsrpc";
+import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { ReqSetReady, ResSetReady } from "../../shared/protocols/roomServer/PtlSetReady";
+import { GamePhase } from "../../shared/types/GamePhase";
 import { RoomServerConn } from "../RoomServer";
 
 export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
@@ -42,8 +44,13 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 				room.data.startMatchTime = Date.now();
 
 				// 更新游戏阶段为游戏中
-				room.data.gamePhase = "PLAYING" as any;
+				currentUser.gamePhase = GamePhase.PLAYING;
 
+				room.data.users.forEach((user) => {
+					user.gamePhase = GamePhase.PLAYING;
+					RedisRoomStateService.updateUserGamePhase(parseInt(user.id), GamePhase.PLAYING);
+				});
+				room.userStates = {}
 				// 广播游戏开始消息
 				room.broadcastMsg("serverMsg/GameStarted", {
 					time: new Date(),

@@ -79,12 +79,15 @@ export class GameBase extends Component {
 	}
 
 	public backHome() {
+		this.roomClient.sendMsg("serverMsg/ExitGame", {});
 		this.node.removeFromParent();
 		this.node.destroy();
 	}
 
 	public gameOver(playerId: string) {
-		this.isGameOver = true;
+		this.scheduleOnce(() => {
+			this.isGameOver = true;
+		}, 2);
 		this.roomClient.callApi("GameOver", {
 			playerId: playerId,
 		});

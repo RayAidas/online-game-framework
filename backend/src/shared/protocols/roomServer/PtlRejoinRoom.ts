@@ -13,8 +13,6 @@ export interface ResRejoinRoom extends BaseResponse {
 	currentUser: UserInfo;
 	// 是否是重连（true）还是首次加入（false）
 	isRejoin: boolean;
-	// 当前游戏阶段
-	gamePhase: GamePhase;
 }
 
 export const conf: BaseConf = {

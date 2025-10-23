@@ -15,6 +15,7 @@ import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
+import { MsgExitGame } from './roomServer/serverMsg/MsgExitGame';
 import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
 import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
@@ -24,7 +25,6 @@ import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
 import { MsgUserOffline } from './roomServer/serverMsg/MsgUserOffline';
 import { MsgUserOnline } from './roomServer/serverMsg/MsgUserOnline';
 import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
-import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
 
 export interface ServiceType {
     api: {
@@ -85,6 +85,7 @@ export interface ServiceType {
         "clientMsg/UpdateRoomState": MsgUpdateRoomState,
         "clientMsg/UserState": MsgUserState,
         "serverMsg/Chat": MsgChat,
+        "serverMsg/ExitGame": MsgExitGame,
         "serverMsg/GameOver": MsgGameOver,
         "serverMsg/GameStarted": MsgGameStarted,
         "serverMsg/OwnerChanged": MsgOwnerChanged,
@@ -93,13 +94,12 @@ export interface ServiceType {
         "serverMsg/UserJoin": MsgUserJoin,
         "serverMsg/UserOffline": MsgUserOffline,
         "serverMsg/UserOnline": MsgUserOnline,
-        "serverMsg/UserReadyChanged": MsgUserReadyChanged,
-        "serverMsg/UserStates": MsgUserStates
+        "serverMsg/UserReadyChanged": MsgUserReadyChanged
     }
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 20,
+    "version": 23,
     "services": [
         {
             "id": 11,
@@ -219,6 +219,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "type": "msg"
         },
         {
+            "id": 31,
+            "name": "serverMsg/ExitGame",
+            "type": "msg"
+        },
+        {
             "id": 25,
             "name": "serverMsg/GameOver",
             "type": "msg"
@@ -261,11 +266,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 16,
             "name": "serverMsg/UserReadyChanged",
-            "type": "msg"
-        },
-        {
-            "id": 10,
-            "name": "serverMsg/UserStates",
             "type": "msg"
         }
     ],
@@ -657,6 +657,31 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Boolean"
                     },
                     "optional": true
+                },
+                {
+                    "id": 4,
+                    "name": "gamePhase",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/GamePhase/GamePhase"
+                    }
+                }
+            ]
+        },
+        "../../types/GamePhase/GamePhase": {
+            "type": "Enum",
+            "members": [
+                {
+                    "id": 0,
+                    "value": "WAITING"
+                },
+                {
+                    "id": 1,
+                    "value": "PLAYING"
+                },
+                {
+                    "id": 2,
+                    "value": "FINISHED"
                 }
             ]
         },
@@ -794,14 +819,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 },
                 {
-                    "id": 10,
-                    "name": "gamePhase",
-                    "type": {
-                        "type": "Reference",
-                        "target": "../../types/GamePhase/GamePhase"
-                    }
-                },
-                {
                     "id": 5,
                     "name": "lastEmptyTime",
                     "type": {
@@ -823,23 +840,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Number"
                     }
-                }
-            ]
-        },
-        "../../types/GamePhase/GamePhase": {
-            "type": "Enum",
-            "members": [
-                {
-                    "id": 0,
-                    "value": "WAITING"
-                },
-                {
-                    "id": 1,
-                    "value": "PLAYING"
-                },
-                {
-                    "id": 2,
-                    "value": "FINISHED"
                 }
             ]
         },
@@ -922,14 +922,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "isRejoin",
                     "type": {
                         "type": "Boolean"
-                    }
-                },
-                {
-                    "id": 3,
-                    "name": "gamePhase",
-                    "type": {
-                        "type": "Reference",
-                        "target": "../../types/GamePhase/GamePhase"
                     }
                 }
             ]
@@ -1204,6 +1196,9 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "serverMsg/MsgExitGame/MsgExitGame": {
+            "type": "Interface"
+        },
         "serverMsg/MsgGameOver/MsgGameOver": {
             "type": "Interface",
             "properties": [
@@ -1422,25 +1417,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "isReady",
                     "type": {
                         "type": "Boolean"
-                    }
-                }
-            ]
-        },
-        "serverMsg/MsgUserStates/MsgUserStates": {
-            "type": "Interface",
-            "properties": [
-                {
-                    "id": 0,
-                    "name": "userStates",
-                    "type": {
-                        "type": "Interface",
-                        "indexSignature": {
-                            "keyType": "String",
-                            "type": {
-                                "type": "Reference",
-                                "target": "../../types/RoomUserState/RoomUserState"
-                            }
-                        }
                     }
                 }
             ]

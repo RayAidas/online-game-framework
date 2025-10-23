@@ -148,15 +148,6 @@ export class RoomPanel extends Component {
 		if (this.userAlreadyReadyLabel) {
 			this.userAlreadyReadyLabel.string = `已准备: ${readyCount}/${totalCount}`;
 		}
-		if (readyCount == this.currentRoomData.maxUser) {
-			if (this.game) return;
-			if (this.isFrameSyncPaused()) this.resumeFrameSync();
-			let gameNode = instantiate(this.gamePrefab);
-			this.game = gameNode.getComponent(GameBase);
-			this.game.init(this.roomClient);
-			this.node.parent.addChild(gameNode);
-			this.callSetReady(false);
-		}
 	}
 
 	private updateUserList() {
@@ -619,6 +610,12 @@ export class RoomPanel extends Component {
 	 * 处理游戏开始消息
 	 */
 	private handleGameStarted(msg: any) {
+		if (this.isFrameSyncPaused()) this.resumeFrameSync();
+		let gameNode = instantiate(this.gamePrefab);
+		this.game = gameNode.getComponent(GameBase);
+		this.game.init(this.roomClient);
+		this.node.parent.addChild(gameNode);
+		this.callSetReady(false);
 		if (this.game) {
 			// 为房间内所有用户创建玩家节点
 			if (this.currentRoomData && this.currentUser) {
@@ -668,8 +665,10 @@ export class RoomPanel extends Component {
 	}
 
 	private handleGameOver(msg: any) {
-		this.game.showOverPanel(msg.playerId);
-		this.pauseFrameSync();
+		this.game?.showOverPanel(msg.playerId);
+		this.scheduleOnce(() => {
+			this.pauseFrameSync();
+		}, 2);
 		this.game = null;
 	}
 
@@ -780,7 +779,7 @@ export class RoomPanel extends Component {
 					if (this.currentRoomData && this.currentUser) {
 						this.currentRoomData.users.forEach((user) => {
 							// 跳过离线用户
-							if (user.isOffline) return;
+							// if (user.isOffline) return;
 
 							const isCurrentPlayer = user.id === this.currentUser!.id;
 
@@ -808,6 +807,10 @@ export class RoomPanel extends Component {
 										const hpDiff = state.hp - playerInfo.hp;
 										playerInfo.updateHp(hpDiff);
 										console.log(`重连后更新玩家 ${playerId} 血量: ${state.hp}`);
+										if (playerInfo.hp <= 0) {
+											this.game.isGameOver = true;
+											this.game.showOverPanel(playerId);
+										}
 									}
 								}
 							});

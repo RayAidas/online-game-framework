@@ -181,6 +181,7 @@ export class GameDemo extends GameBase {
 	 * 创建玩家节点
 	 */
 	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean = false, initialPosition?: Vec3): Node {
+		console.log("创建玩家节点:", user);
 		let playerNode: Node;
 		let playerId = user.id;
 		let color = user.color;
@@ -388,6 +389,7 @@ export class GameDemo extends GameBase {
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
 		if (playerInfo) {
 			playerInfo.updateHp(-10);
+			this.reportGameState();
 			if (playerInfo.hp <= 0) {
 				console.log("玩家被击中,游戏结束:", playerId);
 				this.gameOver(playerId);
@@ -399,7 +401,7 @@ export class GameDemo extends GameBase {
 		}
 	}
 
-	public showOverPanel(playerId: string) {
+	public showOverPanel(playerId?: string) {
 		this.overPanel.active = true;
 		if (playerId === this.currentPlayerId) this.overLabel.string = "你输了";
 		else this.overLabel.string = "你赢了";

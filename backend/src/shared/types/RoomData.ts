@@ -20,11 +20,6 @@ export interface RoomData {
 	}[];
 
 	/**
-	 * 游戏阶段状态
-	 */
-	gamePhase: GamePhase;
-
-	/**
 	 * 上一次空房的时间（undefined 代表房内有人）
 	 * 用于定时解散无人的房间
 	 */

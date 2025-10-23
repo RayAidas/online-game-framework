@@ -1,5 +1,7 @@
 import { ApiCall } from "tsrpc";
+import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { ReqGameOver, ResGameOver } from "../../shared/protocols/roomServer/PtlGameOver";
+import { GamePhase } from "../../shared/types/GamePhase";
 import { RoomServerConn } from "../RoomServer";
 
 export async function ApiGameOver(call: ApiCall<ReqGameOver, ResGameOver>) {
@@ -16,15 +18,14 @@ export async function ApiGameOver(call: ApiCall<ReqGameOver, ResGameOver>) {
 	}
 
 	room.overNum++;
-	if (room.overNum >= room.data.maxUser) {
+	if (room.overNum >= room.data.maxUser || room.overNum >= room.data.users.filter((user) => !user.isOffline).length) {
 		room.overNum = 0;
-
-		// 更新游戏阶段为已结束
-		room.data.gamePhase = "FINISHED" as any;
 
 		// 重置所有用户的准备状态
 		room.data.users.forEach((user) => {
 			user.isReady = false;
+			user.gamePhase = GamePhase.FINISHED;
+			RedisRoomStateService.updateUserGamePhase(parseInt(user.id), GamePhase.FINISHED);
 		});
 
 		room.broadcastMsg("serverMsg/GameOver", {

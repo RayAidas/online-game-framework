@@ -15,12 +15,7 @@ export async function ApiExitGame(call: ApiCall<ReqExitGame, ResExitGame>) {
 		return call.error("用户信息无效");
 	}
 
-	room.finishNum++;
-	if (room.finishNum >= room.data.maxUser) {
-		room.finishNum = 0;
-		room.data.gamePhase = "WAITING" as any;
-	}
-
+	
 	call.succ({});
 
 }

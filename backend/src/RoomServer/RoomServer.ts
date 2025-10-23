@@ -96,7 +96,6 @@ export class RoomServer {
 			users: [],
 			messages: [],
 			ownerId: ownerId || "",
-			gamePhase: "WAITING" as any, // 初始化为准备阶段
 			startMatchTime: Date.now(),
 			updateTime: Date.now(),
 			seed: +Math.random().toString().slice(2),

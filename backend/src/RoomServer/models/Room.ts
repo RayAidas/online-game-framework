@@ -1,10 +1,12 @@
 import { PrefixLogger } from "tsrpc";
 import { roomServer } from "../../roomServer";
 import { FrameSyncService } from "../../services/FrameSyncService";
+import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
 import { MsgSyncFrame } from "../../shared/types/FrameSync";
+import { GamePhase } from "../../shared/types/GamePhase";
 import { RoomData } from "../../shared/types/RoomData";
 import { RoomUserState } from "../../shared/types/RoomUserState";
 import { RoomServerConn } from "../RoomServer";
@@ -17,25 +19,16 @@ export class Room {
 	} = {};
 	logger: PrefixLogger;
 	overNum: number = 0;
-	finishNum: number = 0;
 	/**帧同步服务*/
 	private frameSyncService: FrameSyncService | null = null;
 
 	constructor(data: RoomData) {
 		this.data = data;
 		this.overNum = 0;
-		this.finishNum = 0;
 		this.logger = new PrefixLogger({
 			logger: roomServer.logger,
 			prefixs: [`[Room ${data.id}]`],
 		});
-
-		// 每 100ms 同步一次 UserState
-		// this._setInterval(() => {
-		// 	this.broadcastMsg("serverMsg/UserStates", {
-		// 		userStates: this.userStates,
-		// 	});
-		// }, 100);
 	}
 
 	get state(): MsgUpdateRoomState["rooms"][number] {
@@ -57,6 +50,14 @@ export class Room {
 	}
 
 	listenMsgs(conn: RoomServerConn) {
+		conn.listenMsg("serverMsg/ExitGame", (call) => {
+			let conn = call.conn as RoomServerConn;
+			let currentUser = conn.currentUser;
+			if (currentUser) {
+				currentUser.gamePhase = GamePhase.WAITING;
+				RedisRoomStateService.updateUserGamePhase(parseInt(currentUser.id), GamePhase.WAITING);
+			}
+		});
 		conn.listenMsg("clientMsg/UserState", (call) => {
 			const conn = call.conn as RoomServerConn;
 			// 接收客户端上报的所有玩家状态
@@ -92,8 +93,6 @@ export class Room {
 							...state,
 							x: serverX,
 							y: serverY,
-							// 移除 id 字段，因为服务器不需要保存视角信息
-							id: undefined,
 						};
 					}
 				});
@@ -117,8 +116,6 @@ export class Room {
 		this.data.updateTime = Date.now();
 
 		if (conn) {
-			// 只取消监听消息，不关闭连接
-			this.unlistenMsgs(conn);
 			// 清除房间引用
 			conn.currentRoom = undefined;
 		}
@@ -158,6 +155,7 @@ export class Room {
 					});
 				}
 			} else {
+				this.unlistenMsgs(conn);
 				// 房间没人了，立即销毁房间
 				this.logger.log("[UserLeave] 房主离开，房间无人，立即销毁房间");
 				this.destroy();
@@ -228,7 +226,6 @@ export class Room {
 			frameIndex: this.frameSyncService?.getCurrentFrameIndex() || 0,
 			roomData: {
 				id: this.data.id,
-				gamePhase: this.data.gamePhase,
 				users: this.data.users.map((user) => ({
 					id: user.id,
 					nickname: user.nickname,

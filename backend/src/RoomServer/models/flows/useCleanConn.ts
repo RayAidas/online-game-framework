@@ -36,7 +36,7 @@ export function useCleanConn(server: WsServer<any>) {
 						userInRoom.isOffline = true;
 
 						// 如果在准备阶段掉线，自动取消准备状态
-						if (room.data.gamePhase === GamePhase.WAITING && userInRoom.isReady) {
+						if (userInRoom.gamePhase === GamePhase.WAITING && userInRoom.isReady) {
 							userInRoom.isReady = false;
 							console.log(`用户 ${userId} (${conn.currentUser.nickname}) 在准备阶段掉线，已自动取消准备状态`);
 

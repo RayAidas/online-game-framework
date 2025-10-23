@@ -20,6 +20,7 @@ import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
+import { MsgExitGame } from './roomServer/serverMsg/MsgExitGame';
 import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
 import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
@@ -29,7 +30,6 @@ import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
 import { MsgUserOffline } from './roomServer/serverMsg/MsgUserOffline';
 import { MsgUserOnline } from './roomServer/serverMsg/MsgUserOnline';
 import { MsgUserReadyChanged } from './roomServer/serverMsg/MsgUserReadyChanged';
-import { MsgUserStates } from './roomServer/serverMsg/MsgUserStates';
 import { ReqLogin, ResLogin } from './userServer/PtlLogin';
 import { ReqLogout, ResLogout } from './userServer/PtlLogout';
 import { ReqRegister, ResRegister } from './userServer/PtlRegister';
@@ -125,6 +125,7 @@ export interface ServiceType {
         "roomServer/clientMsg/UpdateRoomState": MsgUpdateRoomState,
         "roomServer/clientMsg/UserState": MsgUserState,
         "roomServer/serverMsg/Chat": MsgChat,
+        "roomServer/serverMsg/ExitGame": MsgExitGame,
         "roomServer/serverMsg/GameOver": MsgGameOver,
         "roomServer/serverMsg/GameStarted": MsgGameStarted,
         "roomServer/serverMsg/OwnerChanged": MsgOwnerChanged,
@@ -133,13 +134,12 @@ export interface ServiceType {
         "roomServer/serverMsg/UserJoin": MsgUserJoin,
         "roomServer/serverMsg/UserOffline": MsgUserOffline,
         "roomServer/serverMsg/UserOnline": MsgUserOnline,
-        "roomServer/serverMsg/UserReadyChanged": MsgUserReadyChanged,
-        "roomServer/serverMsg/UserStates": MsgUserStates
+        "roomServer/serverMsg/UserReadyChanged": MsgUserReadyChanged
     }
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 41,
+    "version": 44,
     "services": [
         {
             "id": 31,
@@ -294,6 +294,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "type": "msg"
         },
         {
+            "id": 49,
+            "name": "roomServer/serverMsg/ExitGame",
+            "type": "msg"
+        },
+        {
             "id": 43,
             "name": "roomServer/serverMsg/GameOver",
             "type": "msg"
@@ -336,11 +341,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 34,
             "name": "roomServer/serverMsg/UserReadyChanged",
-            "type": "msg"
-        },
-        {
-            "id": 21,
-            "name": "roomServer/serverMsg/UserStates",
             "type": "msg"
         },
         {
@@ -987,6 +987,31 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Boolean"
                     },
                     "optional": true
+                },
+                {
+                    "id": 4,
+                    "name": "gamePhase",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/GamePhase/GamePhase"
+                    }
+                }
+            ]
+        },
+        "../types/GamePhase/GamePhase": {
+            "type": "Enum",
+            "members": [
+                {
+                    "id": 0,
+                    "value": "WAITING"
+                },
+                {
+                    "id": 1,
+                    "value": "PLAYING"
+                },
+                {
+                    "id": 2,
+                    "value": "FINISHED"
                 }
             ]
         },
@@ -1124,14 +1149,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 },
                 {
-                    "id": 10,
-                    "name": "gamePhase",
-                    "type": {
-                        "type": "Reference",
-                        "target": "../types/GamePhase/GamePhase"
-                    }
-                },
-                {
                     "id": 5,
                     "name": "lastEmptyTime",
                     "type": {
@@ -1153,23 +1170,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Number"
                     }
-                }
-            ]
-        },
-        "../types/GamePhase/GamePhase": {
-            "type": "Enum",
-            "members": [
-                {
-                    "id": 0,
-                    "value": "WAITING"
-                },
-                {
-                    "id": 1,
-                    "value": "PLAYING"
-                },
-                {
-                    "id": 2,
-                    "value": "FINISHED"
                 }
             ]
         },
@@ -1252,14 +1252,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "isRejoin",
                     "type": {
                         "type": "Boolean"
-                    }
-                },
-                {
-                    "id": 3,
-                    "name": "gamePhase",
-                    "type": {
-                        "type": "Reference",
-                        "target": "../types/GamePhase/GamePhase"
                     }
                 }
             ]
@@ -1534,6 +1526,9 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "roomServer/serverMsg/MsgExitGame/MsgExitGame": {
+            "type": "Interface"
+        },
         "roomServer/serverMsg/MsgGameOver/MsgGameOver": {
             "type": "Interface",
             "properties": [
@@ -1752,25 +1747,6 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "isReady",
                     "type": {
                         "type": "Boolean"
-                    }
-                }
-            ]
-        },
-        "roomServer/serverMsg/MsgUserStates/MsgUserStates": {
-            "type": "Interface",
-            "properties": [
-                {
-                    "id": 0,
-                    "name": "userStates",
-                    "type": {
-                        "type": "Interface",
-                        "indexSignature": {
-                            "keyType": "String",
-                            "type": {
-                                "type": "Reference",
-                                "target": "../types/RoomUserState/RoomUserState"
-                            }
-                        }
                     }
                 }
             ]
