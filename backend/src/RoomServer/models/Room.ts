@@ -21,6 +21,8 @@ export class Room {
 	overNum: number = 0;
 	/**帧同步服务*/
 	private frameSyncService: FrameSyncService | null = null;
+	/**血量同步定时器 - 定期广播权威血量防止作弊*/
+	private hpSyncTimer: NodeJS.Timeout | null = null;
 
 	constructor(data: RoomData) {
 		this.data = data;
@@ -198,6 +200,9 @@ export class Room {
 
 		this.frameSyncService = new FrameSyncService(
 			(msg: MsgSyncFrame) => {
+				// 处理帧数据中的伤害计算（服务端权威）
+				this.processFrameDamage(msg.syncFrame);
+
 				// 广播帧数据给房间内所有连接
 				this.broadcastMsg("serverMsg/SyncFrame", msg);
 			},
@@ -214,6 +219,101 @@ export class Room {
 
 		this.frameSyncService.startSyncFrame();
 		this.logger.log("[FrameSync] 帧同步已启动，状态快照间隔: 1秒");
+
+		// 启动血量同步 - 定期广播权威血量
+		this.startHpSync();
+	}
+
+	/**
+	 * 启动血量同步 - 定期广播权威血量防止作弊和误差累积
+	 */
+	private startHpSync() {
+		if (this.hpSyncTimer) {
+			return;
+		}
+
+		// 初始化所有玩家的血量
+		this.data.users.forEach((user) => {
+			if (!this.userStates[user.id]) {
+				this.userStates[user.id] = {};
+			}
+			if (this.userStates[user.id].hp === undefined) {
+				this.userStates[user.id].hp = 100; // 初始血量
+			}
+		});
+
+		// 每500ms广播一次权威血量
+		this.hpSyncTimer = setInterval(() => {
+			if (this.data.gamePhase === GamePhase.PLAYING && this.conns.length > 0) {
+				// 收集所有玩家的血量
+				const hpData: { [playerId: string]: number } = {};
+				this.data.users.forEach((user) => {
+					if (this.userStates[user.id]) {
+						hpData[user.id] = this.userStates[user.id].hp ?? 100;
+					}
+				});
+
+				// 广播权威血量
+				this.broadcastMsg("serverMsg/HpSync", {
+					hpData: hpData,
+					timestamp: Date.now(),
+				});
+			}
+		}, 500);
+
+		this.logger.log("[HpSync] 血量同步已启动，间隔: 500ms");
+	}
+
+	/**
+	 * 停止血量同步
+	 */
+	private stopHpSync() {
+		if (this.hpSyncTimer) {
+			clearInterval(this.hpSyncTimer);
+			this.hpSyncTimer = null;
+			this.logger.log("[HpSync] 血量同步已停止");
+		}
+	}
+
+	/**
+	 * 处理帧数据中的伤害计算（服务端权威）
+	 * 客户端只负责碰撞检测和发送BeHit事件，服务器负责真实的伤害计算
+	 */
+	private processFrameDamage(frame: any) {
+		if (!frame || !frame.connectionInputs) {
+			return;
+		}
+
+		// 遍历所有输入，查找BeHit事件
+		for (const connInput of frame.connectionInputs) {
+			if (!connInput.operations) continue;
+
+			for (const operation of connInput.operations) {
+				// 只处理BeHit类型的输入
+				if (operation.inputType === "BeHit") {
+					const targetPlayerId = operation.playerId;
+					const attackerId = connInput.connectionId;
+
+					// 获取被攻击玩家的状态
+					if (this.userStates[targetPlayerId]) {
+						// 服务器计算伤害（这里可以添加更复杂的逻辑，如暴击、护甲等）
+						const damage = 10;
+						const oldHp = this.userStates[targetPlayerId].hp ?? 100;
+						const newHp = Math.max(0, oldHp - damage);
+
+						this.userStates[targetPlayerId].hp = newHp;
+
+						this.logger.log(`[伤害计算] ${attackerId} 击中 ${targetPlayerId}，` + `伤害: ${damage}，血量: ${oldHp} → ${newHp}`);
+
+						// 检查是否死亡
+						if (newHp <= 0 && oldHp > 0) {
+							this.logger.log(`[游戏结束] 玩家 ${targetPlayerId} 被击败`);
+							// 游戏结束逻辑会由客户端的 GameOver API 触发
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/**
@@ -249,6 +349,8 @@ export class Room {
 			this.frameSyncService = null;
 			this.logger.log("[FrameSync] 帧同步已停止");
 		}
+		// 同时停止血量同步
+		this.stopHpSync();
 	}
 
 	/**

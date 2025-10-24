@@ -82,6 +82,11 @@ export class RoomPanel extends Component {
 			this.handleUserOnline(msg);
 		});
 
+		// 监听服务器血量同步消息（权威血量，防止作弊和误差）
+		this.roomClient.listenMsg("serverMsg/HpSync", (msg) => {
+			this.handleHpSync(msg);
+		});
+
 		// 监听帧同步消息
 		this.roomClient.listenMsg("serverMsg/SyncFrame", (msg) => {
 			console.log("收到帧同步数据:", msg.frameIndex);
@@ -425,6 +430,20 @@ export class RoomPanel extends Component {
 
 		// 更新UI
 		this.updateRoomInfo();
+	}
+
+	/**
+	 * 处理服务器血量同步 - 权威血量，防止作弊和误差累积
+	 */
+	private handleHpSync(msg: any) {
+		if (!this.game || !msg.hpData) {
+			return;
+		}
+
+		// 将服务器的权威血量传递给游戏实例进行校正
+		if (typeof this.game.syncAuthorityHp === "function") {
+			this.game.syncAuthorityHp(msg.hpData);
+		}
 	}
 	// 确保连接已建立
 	private ensureConnection(): Promise<void> {

@@ -36,6 +36,7 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 		if (call.req.isReady) {
 			const allUsersReady = room.data.users.every((user) => user.isReady === true);
 			if (allUsersReady && room.data.users.length >= room.data.maxUser) {
+				room.data.gamePhase = GamePhase.PLAYING;
 				// 至少需要2个玩家才能开始游戏
 				console.log(`[ApiSetReady] 所有玩家已准备就绪，启动帧同步`);
 				room.startFrameSync();

@@ -9,6 +9,7 @@ import { serviceProto, ServiceType } from "../shared/protocols/serviceProto_room
 import { UserInfo } from "../shared/types/UserInfo";
 import { useCleanConn } from "./models/flows/useCleanConn";
 import { Room } from "./models/Room";
+import { GamePhase } from "../shared/types/GamePhase";
 
 export interface RoomServerOptions {
 	port: number;
@@ -99,6 +100,7 @@ export class RoomServer {
 			startMatchTime: Date.now(),
 			updateTime: Date.now(),
 			seed: +Math.random().toString().slice(2),
+			gamePhase: GamePhase.WAITING,
 		});
 
 		this.rooms.push(room);

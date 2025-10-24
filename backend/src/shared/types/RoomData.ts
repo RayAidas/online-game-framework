@@ -32,4 +32,7 @@ export interface RoomData {
 
 	/** 房间信息的最后更新时间 */
 	updateTime: number;
+
+	/** 游戏阶段 */
+	gamePhase: GamePhase;
 }

@@ -23,6 +23,7 @@ import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgExitGame } from './roomServer/serverMsg/MsgExitGame';
 import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
 import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
+import { MsgHpSync } from './roomServer/serverMsg/MsgHpSync';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
@@ -128,6 +129,7 @@ export interface ServiceType {
         "roomServer/serverMsg/ExitGame": MsgExitGame,
         "roomServer/serverMsg/GameOver": MsgGameOver,
         "roomServer/serverMsg/GameStarted": MsgGameStarted,
+        "roomServer/serverMsg/HpSync": MsgHpSync,
         "roomServer/serverMsg/OwnerChanged": MsgOwnerChanged,
         "roomServer/serverMsg/SyncFrame": MsgSyncFrame,
         "roomServer/serverMsg/UserExit": MsgUserExit,
@@ -139,7 +141,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 44,
+    "version": 45,
     "services": [
         {
             "id": 31,
@@ -306,6 +308,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 38,
             "name": "roomServer/serverMsg/GameStarted",
+            "type": "msg"
+        },
+        {
+            "id": 50,
+            "name": "roomServer/serverMsg/HpSync",
             "type": "msg"
         },
         {
@@ -1170,6 +1177,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Number"
                     }
+                },
+                {
+                    "id": 10,
+                    "name": "gamePhase",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../types/GamePhase/GamePhase"
+                    }
                 }
             ]
         },
@@ -1570,6 +1585,31 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "message",
                     "type": {
                         "type": "String"
+                    }
+                }
+            ]
+        },
+        "roomServer/serverMsg/MsgHpSync/MsgHpSync": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "hpData",
+                    "type": {
+                        "type": "Interface",
+                        "indexSignature": {
+                            "keyType": "String",
+                            "type": {
+                                "type": "Number"
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "timestamp",
+                    "type": {
+                        "type": "Number"
                     }
                 }
             ]

@@ -309,6 +309,35 @@ export class GameDemo extends GameBase {
 	}
 
 	/**
+	 * 同步服务器权威血量（定期接收，防止作弊和误差累积）
+	 * @param hpData 服务器的权威血量数据
+	 */
+	public syncAuthorityHp(hpData: { [playerId: string]: number }) {
+		if (!hpData) {
+			return;
+		}
+
+		Object.keys(hpData).forEach((playerId) => {
+			const authorityHp = hpData[playerId];
+			const playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
+
+			if (playerInfo) {
+				const localHp = playerInfo.hp;
+				const hpDiff = Math.abs(localHp - authorityHp);
+
+				// 如果本地血量与服务器血量有差异，进行校正
+				if (hpDiff > 0.1) {
+					// 允许小于0.1的误差
+					console.log(`[血量校正] 玩家 ${playerId}: 本地 ${localHp} → 服务器 ${authorityHp}，` + `误差 ${hpDiff.toFixed(1)}`);
+
+					// 直接校正到服务器血量（血量是关键数据，不需要平滑）
+					playerInfo.updateHp(authorityHp - localHp);
+				}
+			}
+		});
+	}
+
+	/**
 	 * 更新玩家位置
 	 */
 	public updatePlayerPosition(playerId: string, position: Vec3) {
@@ -381,20 +410,34 @@ export class GameDemo extends GameBase {
 	}
 
 	/**
-	 * 玩家被被击中
+	 * 玩家被击中（客户端预测）
+	 * 注意：这只是客户端的即时视觉反馈，真实伤害由服务器计算
+	 * 服务器会通过 HpSync 消息定期同步权威血量，自动校正误差
+	 *
 	 * @param playerId 被击中的玩家ID
+	 * @param bulletId 子弹ID
 	 */
 	public beHit(playerId: string, bulletId?: string) {
 		if (this.isGameOver) return;
+
 		let playerInfo = this.playerInfos.find((info) => info.playerId === playerId);
 		if (playerInfo) {
+			// 客户端预测：立即显示伤害效果（-10血量）
+			// 真实血量由服务器计算，客户端会在下一次 HpSync 时自动校正
 			playerInfo.updateHp(-10);
+
+			// 立即上报游戏状态（包含预测的血量）
 			this.reportGameState();
+
+			// 游戏结束判断也由服务器权威，客户端只做预测显示
 			if (playerInfo.hp <= 0) {
-				console.log("玩家被击中,游戏结束:", playerId);
+				console.log("[预测] 玩家被击中,可能游戏结束:", playerId);
+				// 注意：实际游戏结束由服务器判定，通过 GameOver API
 				this.gameOver(playerId);
 			}
 		}
+
+		// 销毁子弹
 		if (bulletId) {
 			let bullet = this.bullets.find((bullet) => bullet.getComponent(Bullet)?.bulletId === bulletId);
 			if (bullet) bullet.getComponent(Bullet)?.destroyBullet();

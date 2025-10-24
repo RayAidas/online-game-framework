@@ -19,6 +19,7 @@ export async function ApiGameOver(call: ApiCall<ReqGameOver, ResGameOver>) {
 
 	room.overNum++;
 	if (room.overNum >= room.data.maxUser || room.overNum >= room.data.users.filter((user) => !user.isOffline).length) {
+		room.data.gamePhase = GamePhase.FINISHED;
 		room.overNum = 0;
 
 		// 重置所有用户的准备状态

@@ -59,6 +59,8 @@ export class GameBase extends Component {
 
 	public applyServerState(userStates: any) {}
 
+	public syncAuthorityHp(hpData: any) {}
+
 	public syncFrame(connectionInput: any, operate: any) {}
 
 	/**
