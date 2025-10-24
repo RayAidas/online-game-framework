@@ -16,9 +16,18 @@ export function useCleanConn(server: WsServer<any>) {
 				const room = conn.currentRoom;
 				const isOnlyUser = room.data.users.length === 1;
 
-				if (isOnlyUser) {
-					// 房间只有一个人，直接退出房间并清理所有状态
-					console.log(`用户 ${userId} (${conn.currentUser.nickname}) 断线，房间内只有一人，直接退出房间`);
+				// 先标记当前用户为离线（这样后续玩家断线时能看到这个状态）
+				const currentUserInRoom = room.data.users.find((u) => u.id === conn.currentUser.id);
+				if (currentUserInRoom) {
+					currentUserInRoom.isOffline = true;
+				}
+
+				// 检查是否所有玩家都已离线
+				const allUsersOffline = room.data.users.every((u) => u.isOffline);
+
+				if (isOnlyUser || allUsersOffline) {
+					// 房间只有一个人，或其他所有人都已离线，直接退出房间并清理所有状态
+					console.log(`用户 ${userId} (${conn.currentUser.nickname}) 断线，` + `${isOnlyUser ? "房间内只有一人" : "其他玩家都已离线"}，清理房间`);
 
 					// 完全清理：Redis + 内存 + 通知 MatchServer
 					await RedisRoomStateService.userLeaveRoom(userId);
@@ -26,27 +35,21 @@ export function useCleanConn(server: WsServer<any>) {
 					// 调用 leave 清理房间内部状态
 					room.leave(conn);
 				} else {
-					// 房间有多人，标记为离线状态，保留在房间中
+					// 房间有多人且不是全员离线，标记为离线状态，保留在房间中
 					await RedisRoomStateService.markUserOffline(userId);
-					console.log(`用户 ${userId} (${conn.currentUser.nickname}) 断线，标记为离线状态，房间还有 ${room.data.users.length - 1} 人`);
+					console.log(`用户 ${userId} (${conn.currentUser.nickname}) 断线，标记为离线状态，房间还有在线玩家`);
 
-					// 在房间数据中标记用户为离线
-					const userInRoom = room.data.users.find((u) => u.id === conn.currentUser.id);
-					if (userInRoom) {
-						userInRoom.isOffline = true;
+					// 如果在准备阶段掉线，自动取消准备状态
+					if (currentUserInRoom && room.data.gamePhase === GamePhase.WAITING && currentUserInRoom.isReady) {
+						currentUserInRoom.isReady = false;
+						console.log(`用户 ${userId} (${conn.currentUser.nickname}) 在准备阶段掉线，已自动取消准备状态`);
 
-						// 如果在准备阶段掉线，自动取消准备状态
-						if (userInRoom.gamePhase === GamePhase.WAITING && userInRoom.isReady) {
-							userInRoom.isReady = false;
-							console.log(`用户 ${userId} (${conn.currentUser.nickname}) 在准备阶段掉线，已自动取消准备状态`);
-
-							// 广播准备状态变化，让其他玩家看到
-							room.broadcastMsg("serverMsg/UserReadyChanged", {
-								time: new Date(),
-								user: conn.currentUser,
-								isReady: false,
-							});
-						}
+						// 广播准备状态变化，让其他玩家看到
+						room.broadcastMsg("serverMsg/UserReadyChanged", {
+							time: new Date(),
+							user: conn.currentUser,
+							isReady: false,
+						});
 					}
 
 					room.broadcastMsg("serverMsg/UserOffline", {

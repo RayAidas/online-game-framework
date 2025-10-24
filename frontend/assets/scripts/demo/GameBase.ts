@@ -89,7 +89,7 @@ export class GameBase extends Component {
 	public gameOver(playerId: string) {
 		this.scheduleOnce(() => {
 			this.isGameOver = true;
-		}, 2);
+		}, 1);
 		this.roomClient.callApi("GameOver", {
 			playerId: playerId,
 		});

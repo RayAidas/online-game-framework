@@ -196,6 +196,8 @@ export class Room {
 	 * 启动帧同步
 	 */
 	startFrameSync() {
+		// 启动血量同步 - 定期广播权威血量
+		this.startHpSync();
 		if (this.frameSyncService) {
 			return;
 		}
@@ -221,9 +223,6 @@ export class Room {
 
 		this.frameSyncService.startSyncFrame();
 		this.logger.log("[FrameSync] 帧同步已启动，状态快照间隔: 1秒");
-
-		// 启动血量同步 - 定期广播权威血量
-		this.startHpSync();
 	}
 
 	/**
@@ -233,7 +232,6 @@ export class Room {
 		if (this.hpSyncTimer) {
 			return;
 		}
-
 		// 初始化所有玩家的血量
 		this.data.users.forEach((user) => {
 			if (!this.userStates[user.id]) {

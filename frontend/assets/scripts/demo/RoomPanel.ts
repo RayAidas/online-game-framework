@@ -684,10 +684,11 @@ export class RoomPanel extends Component {
 	}
 
 	private handleGameOver(msg: any) {
+		if (!this.game) return;
 		this.game?.showOverPanel(msg.playerId);
 		this.scheduleOnce(() => {
 			this.pauseFrameSync();
-		}, 2);
+		}, 1);
 		this.game.gameOver(msg.playerId);
 		this.game = null;
 	}
@@ -828,7 +829,7 @@ export class RoomPanel extends Component {
 										playerInfo.updateHp(hpDiff);
 										console.log(`重连后更新玩家 ${playerId} 血量: ${state.hp}`);
 										if (playerInfo.hp <= 0) {
-											this.game.isGameOver = true;
+											this.game.gameOver(playerId);
 											this.game.showOverPanel(playerId);
 										}
 									}
