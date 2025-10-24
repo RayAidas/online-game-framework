@@ -688,6 +688,7 @@ export class RoomPanel extends Component {
 		this.scheduleOnce(() => {
 			this.pauseFrameSync();
 		}, 2);
+		this.game.gameOver(msg.playerId);
 		this.game = null;
 	}
 

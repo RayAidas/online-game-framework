@@ -28,12 +28,6 @@ export async function ApiGameOver(call: ApiCall<ReqGameOver, ResGameOver>) {
 			user.gamePhase = GamePhase.FINISHED;
 			RedisRoomStateService.updateUserGamePhase(parseInt(user.id), GamePhase.FINISHED);
 		});
-
-		room.broadcastMsg("serverMsg/GameOver", {
-			time: new Date(),
-			message: "游戏结束！",
-			playerId: call.req.playerId,
-		});
 	}
 
 	call.succ({});

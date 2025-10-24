@@ -429,12 +429,7 @@ export class GameDemo extends GameBase {
 			// 立即上报游戏状态（包含预测的血量）
 			this.reportGameState();
 
-			// 游戏结束判断也由服务器权威，客户端只做预测显示
-			if (playerInfo.hp <= 0) {
-				console.log("[预测] 玩家被击中,可能游戏结束:", playerId);
-				// 注意：实际游戏结束由服务器判定，通过 GameOver API
-				this.gameOver(playerId);
-			}
+			// 游戏结束判断也由服务器权威血量判断
 		}
 
 		// 销毁子弹

@@ -258,6 +258,20 @@ export class Room {
 					hpData: hpData,
 					timestamp: Date.now(),
 				});
+
+				for (const user of this.data.users) {
+					if (this.userStates[user.id]) {
+						if (this.userStates[user.id].hp <= 0) {
+							this.broadcastMsg("serverMsg/GameOver", {
+								time: new Date(),
+								message: "游戏结束！",
+								playerId: user.id,
+							});
+							this.stopHpSync();
+							return;
+						}
+					}
+				}
 			}
 		}, 500);
 
@@ -286,9 +300,10 @@ export class Room {
 
 		// 遍历所有输入，查找BeHit事件
 		for (const connInput of frame.connectionInputs) {
-			if (!connInput.operations) continue;
+			// 注意：字段名是 operates，不是 operations
+			if (!connInput.operates) continue;
 
-			for (const operation of connInput.operations) {
+			for (const operation of connInput.operates) {
 				// 只处理BeHit类型的输入
 				if (operation.inputType === "BeHit") {
 					const targetPlayerId = operation.playerId;
@@ -303,13 +318,7 @@ export class Room {
 
 						this.userStates[targetPlayerId].hp = newHp;
 
-						this.logger.log(`[伤害计算] ${attackerId} 击中 ${targetPlayerId}，` + `伤害: ${damage}，血量: ${oldHp} → ${newHp}`);
-
-						// 检查是否死亡
-						if (newHp <= 0 && oldHp > 0) {
-							this.logger.log(`[游戏结束] 玩家 ${targetPlayerId} 被击败`);
-							// 游戏结束逻辑会由客户端的 GameOver API 触发
-						}
+						this.logger.log(`[伤害计算] ${attackerId} 击中 ${targetPlayerId}，伤害: ${damage}，血量: ${oldHp} → ${newHp}`);
 					}
 				}
 			}
