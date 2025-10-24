@@ -19,6 +19,8 @@ export class Room {
 	} = {};
 	logger: PrefixLogger;
 	overNum: number = 0;
+	/**游戏结束标志 - 是否游戏结束*/
+	isGameOver: boolean = false;
 	/**帧同步服务*/
 	private frameSyncService: FrameSyncService | null = null;
 	/**血量同步定时器 - 定期广播权威血量防止作弊*/
@@ -294,9 +296,8 @@ export class Room {
 	 * 客户端只负责碰撞检测和发送BeHit事件，服务器负责真实的伤害计算
 	 */
 	private processFrameDamage(frame: any) {
-		if (!frame || !frame.connectionInputs) {
-			return;
-		}
+		if (this.isGameOver) return;
+		if (!frame || !frame.connectionInputs) return;
 
 		// 遍历所有输入，查找BeHit事件
 		for (const connInput of frame.connectionInputs) {
@@ -317,7 +318,9 @@ export class Room {
 						const newHp = Math.max(0, oldHp - damage);
 
 						this.userStates[targetPlayerId].hp = newHp;
-
+						if (newHp <= 0) {
+							this.isGameOver = true;
+						}
 						this.logger.log(`[伤害计算] ${attackerId} 击中 ${targetPlayerId}，伤害: ${damage}，血量: ${oldHp} → ${newHp}`);
 					}
 				}

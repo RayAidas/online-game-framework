@@ -51,6 +51,7 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 					user.gamePhase = GamePhase.PLAYING;
 					RedisRoomStateService.updateUserGamePhase(parseInt(user.id), GamePhase.PLAYING);
 				});
+				room.isGameOver = false;
 				room.userStates = {}
 				// 广播游戏开始消息
 				room.broadcastMsg("serverMsg/GameStarted", {
