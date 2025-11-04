@@ -25,6 +25,6 @@ export async function ApiCreateRoom(call: ApiCall<ReqCreateRoom, ResCreateRoom>)
 		}
 	}
 
-	let ret = await matchServer.createRoom(call.req.roomName, call.currentUser?.uid);
+	let ret = await matchServer.createRoom(call.req.roomName, call.req.isFrameSync, call.currentUser?.uid);
 	ret.isSucc ? call.succ(ret.res) : call.error(ret.err);
 }

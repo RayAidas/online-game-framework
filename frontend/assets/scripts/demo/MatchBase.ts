@@ -1,27 +1,29 @@
 import { _decorator, Component, EditBox } from "cc";
-import { CurrentUser } from "db://assets/scripts/shared/models/CurrentUser";
-import { userManager } from "db://assets/scripts/shared/models/UserManager";
 import { ServiceType as MatchServiceType } from "db://assets/scripts/shared/protocols/serviceProto_matchServer";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { HttpClient, WsClient } from "tsrpc-browser";
+import { CurrentUser } from "../shared/models/CurrentUser";
+import { userManager } from "../shared/models/UserManager";
+import { RoomBase } from "./RoomBase";
 import { getMatchClient } from "../getMatchClient";
 import { getRoomClient } from "../getRoomClient";
-import { RoomPanel } from "./RoomPanel";
 import { GamePhase } from "../shared/types/GamePhase";
 const { ccclass, property } = _decorator;
 
-@ccclass("MatchPanel")
-export class MatchPanel extends Component {
+@ccclass("MatchBase")
+export class MatchBase extends Component {
 	@property(EditBox) roomId: EditBox = null!;
 	@property(EditBox) roomName: EditBox = null!;
-	@property(RoomPanel) roomPanel: RoomPanel = null!;
+	@property(RoomBase) roomPanel: RoomBase = null!;
 
 	matchClient: HttpClient<MatchServiceType>;
 	roomClient: WsClient<RoomServiceType>;
 
-	private currentUser: CurrentUser | null = null;
+	public currentUser: CurrentUser | null = null;
 
-	protected onLoad(): void {
+	start() {}
+
+	public onLoad(): void {
 		this.matchClient = getMatchClient();
 		this.roomClient = getRoomClient();
 		// 监听用户状态变化
@@ -105,9 +107,7 @@ export class MatchPanel extends Component {
 			});
 	}
 
-	update(deltaTime: number) {}
-
-	onCreateRoom() {
+	public onCreateRoom() {
 		if (!this.currentUser) {
 			console.log("请先登录");
 			return;
@@ -116,6 +116,7 @@ export class MatchPanel extends Component {
 		this.matchClient
 			.callApi("CreateRoom", {
 				roomName: this.roomName.string || `${this.currentUser.username}的房间`,
+				isFrameSync: this.roomPanel.isFrameSync,
 			})
 			.then((ret) => {
 				if (ret.isSucc) {
@@ -128,7 +129,7 @@ export class MatchPanel extends Component {
 			});
 	}
 
-	onJoinRoom() {
+	public onJoinRoom() {
 		if (!this.currentUser) {
 			console.log("请先登录");
 			return;
@@ -155,7 +156,7 @@ export class MatchPanel extends Component {
 	}
 
 	// 通过房间ID加入房间
-	private joinRoomById(roomId: string) {
+	public joinRoomById(roomId: string) {
 		if (!this.currentUser) {
 			console.log("请先登录");
 			return;
@@ -174,7 +175,7 @@ export class MatchPanel extends Component {
 	}
 
 	// 确保连接已建立
-	private ensureConnection(): Promise<void> {
+	public ensureConnection(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			// 尝试连接（每次都尝试，让 WsClient 自己处理重复连接）
 			this.roomClient
@@ -191,7 +192,7 @@ export class MatchPanel extends Component {
 	}
 
 	// 实际调用加入房间 API
-	private callJoinRoom(roomId: string) {
+	public callJoinRoom(roomId: string) {
 		this.roomClient
 			.callApi("JoinRoom", {
 				roomId: roomId,
@@ -213,8 +214,10 @@ export class MatchPanel extends Component {
 			});
 	}
 
-	onLogout() {
+	public onLogout() {
 		userManager.logout();
 		console.log("用户已登出");
 	}
+
+	update(deltaTime: number) {}
 }

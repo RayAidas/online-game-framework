@@ -1,9 +1,10 @@
 import { _decorator, Color, EventKeyboard, EventMouse, input, Input, instantiate, KeyCode, Node, Prefab, screen, Sprite, Vec2, Vec3 } from "cc";
+import { UserInfo } from "db://assets/scripts/shared/types/UserInfo";
+import { getDistance } from "db://assets/scripts/util";
 import * as _uuid from "uuid";
-import { UserInfo } from "../shared/types/UserInfo";
-import { getDistance } from "../util";
+import { GameBase } from "../GameBase";
 import { Bullet } from "./Bullet";
-import { GameBase } from "./GameBase";
+import { PlayerInfo } from "./PlayerInfo";
 const { ccclass, property } = _decorator;
 
 /**
@@ -22,6 +23,7 @@ const { ccclass, property } = _decorator;
  */
 @ccclass("GameDemo")
 export class GameDemo extends GameBase {
+	@property([PlayerInfo]) playerInfos: PlayerInfo[] = [];
 	@property(Prefab) playerPrefab: Prefab = null!;
 	@property(Prefab) bulletPrefab: Prefab = null!;
 	@property({ tooltip: "移动速度（像素/秒）" }) moveSpeed: number = 200;

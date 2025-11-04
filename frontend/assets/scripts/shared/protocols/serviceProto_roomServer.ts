@@ -101,7 +101,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 24,
+    "version": 25,
     "services": [
         {
             "id": 11,
@@ -468,6 +468,13 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "roomName",
                     "type": {
                         "type": "String"
+                    }
+                },
+                {
+                    "id": 3,
+                    "name": "isFrameSync",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]
@@ -854,6 +861,13 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Reference",
                         "target": "../../types/GamePhase/GamePhase"
+                    }
+                },
+                {
+                    "id": 11,
+                    "name": "isFrameSync",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]

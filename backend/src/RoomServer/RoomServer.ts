@@ -101,6 +101,7 @@ export class RoomServer {
 			updateTime: Date.now(),
 			seed: +Math.random().toString().slice(2),
 			gamePhase: GamePhase.WAITING,
+			isFrameSync: false,
 		});
 
 		this.rooms.push(room);

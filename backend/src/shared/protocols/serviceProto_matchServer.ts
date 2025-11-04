@@ -34,7 +34,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 11,
+    "version": 12,
     "services": [
         {
             "id": 5,
@@ -149,6 +149,13 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "name": "roomName",
                     "type": {
                         "type": "String"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "isFrameSync",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]

@@ -3,6 +3,7 @@ import { BaseConf, BaseRequest, BaseResponse } from "../base";
 export interface ReqCreateRoom extends BaseRequest {
 	matchConnectToken: string;
 	roomName: string;
+	isFrameSync: boolean;
 }
 
 export interface ResCreateRoom extends BaseResponse {

@@ -39,7 +39,9 @@ export default async function (call: ApiCall<ReqSetReady, ResSetReady>) {
 				room.data.gamePhase = GamePhase.PLAYING;
 				// 至少需要2个玩家才能开始游戏
 				console.log(`[ApiSetReady] 所有玩家已准备就绪，启动帧同步`);
-				room.startFrameSync();
+				if (room.data.isFrameSync) {
+					room.startFrameSync();
+				}
 
 				// 设置游戏开始时间
 				room.data.startMatchTime = Date.now();

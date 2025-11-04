@@ -179,30 +179,30 @@ export class MatchServer {
 				});
 				++succNum;
 			}
-			// 没有合适的房间，那么创建一个房间
-			else {
-				let retCreateRoom = await this.createRoom("系统房间 " + this._nextRoomIndex++);
-				if (retCreateRoom.isSucc) {
-					matchingRooms.push({
-						id: retCreateRoom.res.roomId,
-						serverUrl: retCreateRoom.res.serverUrl,
-						userNum: 1,
-					});
+			// // 没有合适的房间，那么创建一个房间
+			// else {
+			// 	let retCreateRoom = await this.createRoom("系统房间 " + this._nextRoomIndex++);
+			// 	if (retCreateRoom.isSucc) {
+			// 		matchingRooms.push({
+			// 			id: retCreateRoom.res.roomId,
+			// 			serverUrl: retCreateRoom.res.serverUrl,
+			// 			userNum: 1,
+			// 		});
 
-					this.matchQueue.delete(call);
-					call.succ({
-						roomId: retCreateRoom.res.roomId,
-						serverUrl: retCreateRoom.res.serverUrl,
-					});
-				}
-			}
+			// 		this.matchQueue.delete(call);
+			// 		call.succ({
+			// 			roomId: retCreateRoom.res.roomId,
+			// 			serverUrl: retCreateRoom.res.serverUrl,
+			// 		});
+			// 	}
+			// }
 		}
 
 		this.logger.log(`匹配结束，成功匹配人数=${succNum}`);
 	}
 	// #endregion
 
-	async createRoom(roomName: string, userId?: number): Promise<ApiReturn<ResCreateRoom>> {
+	async createRoom(roomName: string, isFrameSync: boolean, userId?: number): Promise<ApiReturn<ResCreateRoom>> {
 		// 如果有用户ID，检查用户是否已经在房间中
 		if (userId && RoomStateService.isUserInRoom(userId)) {
 			return { isSucc: false, err: new TsrpcError("您已经在房间中，请先退出当前房间再创建新房间", { code: "ALREADY_IN_ROOM" }) };
@@ -218,6 +218,7 @@ export class MatchServer {
 		let op = await roomServer.client.callApi("CreateRoom", {
 			matchConnectToken: BackConfig.matchConnectToken,
 			roomName: roomName,
+			isFrameSync: isFrameSync,
 		});
 		if (!op.isSucc) {
 			return { isSucc: false, err: new TsrpcError(op.err) };

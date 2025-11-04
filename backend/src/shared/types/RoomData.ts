@@ -35,4 +35,7 @@ export interface RoomData {
 
 	/** 游戏阶段 */
 	gamePhase: GamePhase;
+
+	/** 是否开启帧同步 */
+	isFrameSync: boolean;
 }

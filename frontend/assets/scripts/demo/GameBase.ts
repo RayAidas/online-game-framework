@@ -1,13 +1,12 @@
 import { _decorator, Component, Label, Node } from "cc";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
+import { UserInfo } from "db://assets/scripts/shared/types/UserInfo";
 import { WsClient } from "tsrpc-browser";
-import { UserInfo } from "../shared/types/UserInfo";
-import { PlayerInfo } from "./PlayerInfo";
+import { RoomData } from "../shared/types/RoomData";
 const { ccclass, property } = _decorator;
 
 @ccclass("GameBase")
 export class GameBase extends Component {
-	@property([PlayerInfo]) playerInfos: PlayerInfo[] = [];
 	@property(Node) overPanel: Node = null!;
 	@property(Label) overLabel: Label = null!;
 
@@ -18,6 +17,7 @@ export class GameBase extends Component {
 	public players: Map<string, Node> = new Map();
 	public playerIndex: number = 0;
 	public isGameOver: boolean = false;
+	public currentRoomData: RoomData | null = null;
 
 	// 保存绑定后的函数引用，用于正确清理事件监听
 	public boundOnWindowBlur: () => void = null!;
@@ -26,8 +26,9 @@ export class GameBase extends Component {
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>) {
+	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData) {
 		this.roomClient = roomClient;
+		this.currentRoomData = currentRoomData;
 	}
 
 	/**
