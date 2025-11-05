@@ -3,9 +3,9 @@ import { roomServer } from "../../roomServer";
 import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { ReqRejoinRoom, ResRejoinRoom } from "../../shared/protocols/roomServer/PtlRejoinRoom";
+import { GamePhase } from "../../shared/types/GamePhase";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { RoomServerConn } from "../RoomServer";
-import { GamePhase } from "../../shared/types/GamePhase";
 
 export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>) {
 	if (!call.currentUser) {
@@ -78,9 +78,12 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 		}
 
 		room.conns.push(conn);
+		// 分配座位号：优先使用保存的座位号，如果没有则使用最小可用座位号
+		const seatIndex = roomInfo.seatIndex ?? room.getNextAvailableSeatIndex();
 		room.data.users.push({
 			...currentUser,
 			color: roomInfo.color || { r: 255, g: 255, b: 255 },
+			seatIndex: seatIndex,
 		});
 		room.userStates[currentUser.id] = {};
 		conn.currentRoom = room;

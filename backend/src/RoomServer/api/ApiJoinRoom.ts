@@ -4,10 +4,10 @@ import { roomServer } from "../../roomServer";
 import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { ReqJoinRoom, ResJoinRoom } from "../../shared/protocols/roomServer/PtlJoinRoom";
+import { GamePhase } from "../../shared/types/GamePhase";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { ColorGenerator } from "../../utils/ColorGenerator";
 import { RoomServerConn } from "../RoomServer";
-import { GamePhase } from "../../shared/types/GamePhase";
 
 export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	// 检查用户是否已经在房间中
@@ -63,10 +63,13 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 	}
 
 	room.conns.push(conn);
+	// 分配座位号：优先使用最小的可用座位号（玩家退出后座位会被释放）
+	const seatIndex = room.getNextAvailableSeatIndex();
 	room.data.users.push({
 		...currentUser,
 		color: userColor,
 		isOffline: false, // 新加入的用户默认在线
+		seatIndex: seatIndex, // 分配座位号
 	});
 	room.userStates[currentUser.id] = {};
 	conn.currentRoom = room;
@@ -87,6 +90,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 			color: userColor,
 			isOffline: false,
 			gamePhase: currentUser.gamePhase,
+			seatIndex: seatIndex, // 持久化座位号
 		});
 	}
 
@@ -97,7 +101,7 @@ export async function ApiJoinRoom(call: ApiCall<ReqJoinRoom, ResJoinRoom>) {
 
 	room.broadcastMsg("serverMsg/UserJoin", {
 		time: new Date(),
-		user: currentUser,
+		user: { ...currentUser, seatIndex }, // 包含座位号信息
 		color: userColor,
 	});
 }

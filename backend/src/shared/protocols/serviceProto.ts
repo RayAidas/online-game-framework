@@ -141,7 +141,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 46,
+    "version": 47,
     "services": [
         {
             "id": 31,
@@ -1016,6 +1016,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                         "type": "Reference",
                         "target": "../types/GamePhase/GamePhase"
                     }
+                },
+                {
+                    "id": 5,
+                    "name": "seatIndex",
+                    "type": {
+                        "type": "Number"
+                    },
+                    "optional": true
                 }
             ]
         },

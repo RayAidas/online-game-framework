@@ -114,6 +114,12 @@ export class Room {
 		// 检查是否是房主离开
 		const isOwner = currentUser && currentUser.id === this.data.ownerId;
 
+		// 记录退出用户的座位号（用于日志）
+		const leavingUser = this.data.users.find((v) => v.id === currentUser.id);
+		if (leavingUser && leavingUser.seatIndex !== undefined) {
+			this.logger.log(`[UserLeave] 释放座位号: ${leavingUser.seatIndex}`);
+		}
+
 		this.conns.removeOne((v) => v === conn);
 		this.data.users.removeOne((v) => v.id === currentUser.id);
 		delete this.userStates[currentUser.id];
@@ -170,6 +176,28 @@ export class Room {
 		if (this.conns.length === 0) {
 			this.data.lastEmptyTime = Date.now();
 		}
+	}
+
+	/**
+	 * 获取下一个可用的座位号
+	 * 玩家退出后，座位号会被释放，新玩家加入时优先使用最小的可用座位号
+	 */
+	getNextAvailableSeatIndex(): number {
+		// 获取所有已占用的座位号
+		const occupiedSeats = new Set(this.data.users.map((u) => u.seatIndex).filter((index): index is number => index !== undefined));
+
+		// 找到最小的未被占用的座位号（从0开始）
+		let seatIndex = 0;
+		while (occupiedSeats.has(seatIndex)) {
+			seatIndex++;
+		}
+
+		this.logger.log(
+			`[SeatAllocation] 分配座位号: ${seatIndex}, 已占用座位: [${Array.from(occupiedSeats)
+				.sort((a, b) => a - b)
+				.join(", ")}]`
+		);
+		return seatIndex;
 	}
 
 	destroy() {
