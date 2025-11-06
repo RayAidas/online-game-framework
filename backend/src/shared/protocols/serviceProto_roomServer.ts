@@ -3,10 +3,13 @@ import { MsgUpdateRoomState } from './roomServer/clientMsg/MsgUpdateRoomState';
 import { MsgUserState } from './roomServer/clientMsg/MsgUserState';
 import { ReqAuth, ResAuth } from './roomServer/PtlAuth';
 import { ReqCreateRoom, ResCreateRoom } from './roomServer/PtlCreateRoom';
+import { ReqEndTurn, ResEndTurn } from './roomServer/PtlEndTurn';
 import { ReqExitGame, ResExitGame } from './roomServer/PtlExitGame';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
+import { ReqInitTurn, ResInitTurn } from './roomServer/PtlInitTurn';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
+import { ReqNextTurn, ResNextTurn } from './roomServer/PtlNextTurn';
 import { ReqPauseFrameSync, ResPauseFrameSync } from './roomServer/PtlPauseFrameSync';
 import { ReqRejoinRoom, ResRejoinRoom } from './roomServer/PtlRejoinRoom';
 import { ReqRequestGameState, ResRequestGameState } from './roomServer/PtlRequestGameState';
@@ -21,6 +24,8 @@ import { MsgGameStarted } from './roomServer/serverMsg/MsgGameStarted';
 import { MsgHpSync } from './roomServer/serverMsg/MsgHpSync';
 import { MsgOwnerChanged } from './roomServer/serverMsg/MsgOwnerChanged';
 import { MsgSyncFrame } from './roomServer/serverMsg/MsgSyncFrame';
+import { MsgTurnChanged } from './roomServer/serverMsg/MsgTurnChanged';
+import { MsgTurnTimeout } from './roomServer/serverMsg/MsgTurnTimeout';
 import { MsgUserExit } from './roomServer/serverMsg/MsgUserExit';
 import { MsgUserJoin } from './roomServer/serverMsg/MsgUserJoin';
 import { MsgUserOffline } from './roomServer/serverMsg/MsgUserOffline';
@@ -37,6 +42,10 @@ export interface ServiceType {
             req: ReqCreateRoom,
             res: ResCreateRoom
         },
+        "EndTurn": {
+            req: ReqEndTurn,
+            res: ResEndTurn
+        },
         "ExitGame": {
             req: ReqExitGame,
             res: ResExitGame
@@ -49,9 +58,17 @@ export interface ServiceType {
             req: ReqGameOver,
             res: ResGameOver
         },
+        "InitTurn": {
+            req: ReqInitTurn,
+            res: ResInitTurn
+        },
         "JoinRoom": {
             req: ReqJoinRoom,
             res: ResJoinRoom
+        },
+        "NextTurn": {
+            req: ReqNextTurn,
+            res: ResNextTurn
         },
         "PauseFrameSync": {
             req: ReqPauseFrameSync,
@@ -92,6 +109,8 @@ export interface ServiceType {
         "serverMsg/HpSync": MsgHpSync,
         "serverMsg/OwnerChanged": MsgOwnerChanged,
         "serverMsg/SyncFrame": MsgSyncFrame,
+        "serverMsg/TurnChanged": MsgTurnChanged,
+        "serverMsg/TurnTimeout": MsgTurnTimeout,
         "serverMsg/UserExit": MsgUserExit,
         "serverMsg/UserJoin": MsgUserJoin,
         "serverMsg/UserOffline": MsgUserOffline,
@@ -101,7 +120,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 26,
+    "version": 28,
     "services": [
         {
             "id": 11,
@@ -131,6 +150,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 33,
+            "name": "EndTurn",
+            "type": "api"
+        },
+        {
             "id": 29,
             "name": "ExitGame",
             "type": "api",
@@ -155,12 +179,22 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 34,
+            "name": "InitTurn",
+            "type": "api"
+        },
+        {
             "id": 5,
             "name": "JoinRoom",
             "type": "api",
             "conf": {
                 "needLogin": true
             }
+        },
+        {
+            "id": 35,
+            "name": "NextTurn",
+            "type": "api"
         },
         {
             "id": 22,
@@ -248,6 +282,16 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 21,
             "name": "serverMsg/SyncFrame",
+            "type": "msg"
+        },
+        {
+            "id": 36,
+            "name": "serverMsg/TurnChanged",
+            "type": "msg"
+        },
+        {
+            "id": 37,
+            "name": "serverMsg/TurnTimeout",
             "type": "msg"
         },
         {
@@ -500,6 +544,21 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlEndTurn/ReqEndTurn": {
+            "type": "Interface"
+        },
+        "PtlEndTurn/ResEndTurn": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "success",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
         "PtlExitGame/ReqExitGame": {
             "type": "Interface",
             "extends": [
@@ -577,6 +636,39 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Reference",
                         "target": "../base/BaseResponse"
+                    }
+                }
+            ]
+        },
+        "PtlInitTurn/ReqInitTurn": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "firstPlayerSeatIndex",
+                    "type": {
+                        "type": "Number"
+                    },
+                    "optional": true
+                },
+                {
+                    "id": 1,
+                    "name": "turnTimeout",
+                    "type": {
+                        "type": "Number"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "PtlInitTurn/ResInitTurn": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "success",
+                    "type": {
+                        "type": "Boolean"
                     }
                 }
             ]
@@ -807,6 +899,15 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     }
                 },
                 {
+                    "id": 12,
+                    "name": "turnData",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/TurnData/TurnData"
+                    },
+                    "optional": true
+                },
+                {
                     "id": 4,
                     "name": "messages",
                     "type": {
@@ -874,6 +975,85 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 11,
                     "name": "isFrameSync",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
+        "../../types/TurnData/TurnData": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "currentSeatIndex",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "turnNumber",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 2,
+                    "name": "turnStartTime",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 3,
+                    "name": "turnTimeout",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 4,
+                    "name": "firstPlayerSeatIndex",
+                    "type": {
+                        "type": "Number"
+                    }
+                },
+                {
+                    "id": 5,
+                    "name": "isEnabled",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                },
+                {
+                    "id": 6,
+                    "name": "lastPlayedId",
+                    "type": {
+                        "type": "String"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "PtlNextTurn/ReqNextTurn": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "data",
+                    "type": {
+                        "type": "Interface"
+                    }
+                }
+            ]
+        },
+        "PtlNextTurn/ResNextTurn": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "success",
                     "type": {
                         "type": "Boolean"
                     }
@@ -1342,6 +1522,88 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": "Any"
                 }
             }
+        },
+        "serverMsg/MsgTurnChanged/MsgTurnChanged": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "turnData",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/TurnData/TurnData"
+                    }
+                },
+                {
+                    "id": 1,
+                    "name": "currentPlayer",
+                    "type": {
+                        "type": "Intersection",
+                        "members": [
+                            {
+                                "id": 0,
+                                "type": {
+                                    "type": "Reference",
+                                    "target": "../../types/UserInfo/UserInfo"
+                                }
+                            },
+                            {
+                                "id": 1,
+                                "type": {
+                                    "type": "Interface",
+                                    "properties": [
+                                        {
+                                            "id": 0,
+                                            "name": "color",
+                                            "type": {
+                                                "type": "Interface",
+                                                "properties": [
+                                                    {
+                                                        "id": 0,
+                                                        "name": "r",
+                                                        "type": {
+                                                            "type": "Number"
+                                                        }
+                                                    },
+                                                    {
+                                                        "id": 1,
+                                                        "name": "g",
+                                                        "type": {
+                                                            "type": "Number"
+                                                        }
+                                                    },
+                                                    {
+                                                        "id": 2,
+                                                        "name": "b",
+                                                        "type": {
+                                                            "type": "Number"
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "serverMsg/MsgTurnTimeout/MsgTurnTimeout": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "turnData",
+                    "type": {
+                        "type": "Reference",
+                        "target": "../../types/TurnData/TurnData"
+                    },
+                    "optional": true
+                }
+            ]
         },
         "serverMsg/MsgUserExit/MsgUserExit": {
             "type": "Interface",

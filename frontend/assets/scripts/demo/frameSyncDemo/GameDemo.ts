@@ -240,8 +240,7 @@ export class GameDemo extends GameBase {
 
 		// 保存玩家引用
 		this.players.set(playerId, playerNode);
-		this.playerInfos[this.playerIndex].init(user.id, user.nickname, color);
-		this.playerIndex++;
+		this.playerInfos[user.seatIndex].init(user.id, user.nickname, color);
 
 		// 如果是当前玩家，设置为可控制的玩家
 		if (isCurrentPlayer) {

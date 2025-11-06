@@ -213,11 +213,198 @@ export class Room {
 			this.frameSyncService = null;
 		}
 
+		// 清理回合定时器
+		this.clearTurnTimer();
+
 		// 清理房间状态
 		RoomStateService.clearRoomState(this.data.id);
 
 		roomServer.rooms.removeOne((v) => v === this);
 		roomServer.id2Room.delete(this.data.id);
+	}
+
+	/**
+	 * 初始化回合制
+	 * @param firstPlayerSeatIndex 先手玩家的座位号，默认为0
+	 * @param turnTimeout 回合超时时间（毫秒），0表示无限制
+	 */
+	initTurnBased(firstPlayerSeatIndex: number = 0, turnTimeout: number = 0) {
+		if (!this.data.turnData) {
+			this.data.turnData = {
+				currentSeatIndex: firstPlayerSeatIndex,
+				turnNumber: 1,
+				turnStartTime: Date.now(),
+				turnTimeout: turnTimeout,
+				firstPlayerSeatIndex: firstPlayerSeatIndex,
+				isEnabled: true,
+			};
+			this.logger.log(`[TurnBased] 初始化回合制，先手玩家座位号: ${firstPlayerSeatIndex}, 超时: ${turnTimeout}ms`);
+
+			// 如果设置了超时，启动超时定时器
+			if (turnTimeout > 0) {
+				this.startTurnTimer();
+			}
+		}
+	}
+
+	/**
+	 * 结束回合制
+	 */
+	endTurnBased() {
+		if (this.data.turnData) {
+			this.data.turnData.isEnabled = false;
+			this.clearTurnTimer();
+			this.logger.log("[TurnBased] 结束回合制");
+		}
+	}
+
+	/**
+	 * 获取下一个玩家的座位号（按座位顺序轮流）
+	 */
+	private getNextSeatIndex(currentSeatIndex: number): number {
+		// 获取所有已占用的座位号，并排序
+		const occupiedSeats = this.data.users
+			.map((u) => u.seatIndex)
+			.filter((index): index is number => index !== undefined)
+			.sort((a, b) => a - b);
+
+		if (occupiedSeats.length === 0) {
+			return 0;
+		}
+
+		// 找到当前座位号的位置
+		const currentIndex = occupiedSeats.indexOf(currentSeatIndex);
+
+		// 如果当前座位号不在列表中，或者是最后一个，返回第一个座位号
+		if (currentIndex === -1 || currentIndex === occupiedSeats.length - 1) {
+			return occupiedSeats[0];
+		}
+
+		// 返回下一个座位号
+		return occupiedSeats[currentIndex + 1];
+	}
+
+	/**
+	 * 切换到下一个玩家的回合
+	 */
+	nextTurn(data: {
+		[key: string]: any;
+	}) {
+		if (!this.data.turnData || !this.data.turnData.isEnabled) {
+			this.logger.log("[TurnBased] 回合制未启用");
+			return;
+		}
+
+		const currentSeatIndex = this.data.turnData.currentSeatIndex;
+		const nextSeatIndex = this.getNextSeatIndex(currentSeatIndex);
+
+		this.data.turnData.currentSeatIndex = nextSeatIndex;
+		this.data.turnData.turnNumber++;
+		this.data.turnData.turnStartTime = Date.now();
+		if(data.lastPlayedId != void 0) this.data.turnData.lastPlayedId = data.lastPlayedId;
+		// 获取当前回合玩家信息
+		const currentPlayer = this.data.users.find((u) => u.seatIndex === nextSeatIndex);
+
+		this.logger.log(`[TurnBased] 切换回合 #${this.data.turnData.turnNumber}, 座位号: ${nextSeatIndex}, 玩家: ${currentPlayer?.nickname || "未知"}`);
+
+		// 广播回合变更消息
+		this.broadcastMsg("serverMsg/TurnChanged", {
+			turnData: this.data.turnData,
+			currentPlayer: currentPlayer,
+		});
+
+		// 重启超时定时器
+		if (this.data.turnData.turnTimeout > 0) {
+			this.startTurnTimer();
+		}
+	}
+
+	/**
+	 * 指定玩家开始回合
+	 * @param seatIndex 玩家座位号
+	 */
+	setCurrentTurn(seatIndex: number) {
+		if (!this.data.turnData || !this.data.turnData.isEnabled) {
+			this.logger.log("[TurnBased] 回合制未启用");
+			return;
+		}
+
+		const player = this.data.users.find((u) => u.seatIndex === seatIndex);
+		if (!player) {
+			this.logger.log(`[TurnBased] 座位号 ${seatIndex} 不存在`);
+			return;
+		}
+
+		this.data.turnData.currentSeatIndex = seatIndex;
+		this.data.turnData.turnStartTime = Date.now();
+
+		this.logger.log(`[TurnBased] 设置当前回合玩家，座位号: ${seatIndex}, 玩家: ${player.nickname}`);
+
+		// 广播回合变更消息
+		this.broadcastMsg("serverMsg/TurnChanged", {
+			turnData: this.data.turnData,
+			currentPlayer: player,
+		});
+
+		// 重启超时定时器
+		if (this.data.turnData.turnTimeout > 0) {
+			this.startTurnTimer();
+		}
+	}
+
+	/**
+	 * 回合超时定时器
+	 */
+	private turnTimer: NodeJS.Timeout | null = null;
+
+	/**
+	 * 启动回合超时定时器
+	 */
+	private startTurnTimer() {
+		this.clearTurnTimer();
+
+		if (!this.data.turnData || this.data.turnData.turnTimeout <= 0) {
+			return;
+		}
+
+		this.turnTimer = setTimeout(() => {
+			this.logger.log("[TurnBased] 回合超时，自动切换到下一个玩家");
+
+			// 广播回合超时消息
+			this.broadcastMsg("serverMsg/TurnTimeout", {
+				turnData: this.data.turnData,
+			});
+
+			// 自动切换到下一个玩家
+			this.nextTurn({});
+		}, this.data.turnData.turnTimeout);
+	}
+
+	/**
+	 * 清除回合超时定时器
+	 */
+	private clearTurnTimer() {
+		if (this.turnTimer) {
+			clearTimeout(this.turnTimer);
+			this.turnTimer = null;
+		}
+	}
+
+	/**
+	 * 检查是否是指定玩家的回合
+	 * @param userId 用户ID
+	 */
+	isPlayerTurn(userId: string): boolean {
+		if (!this.data.turnData || !this.data.turnData.isEnabled) {
+			return true; // 回合制未启用，所有玩家都可以操作
+		}
+
+		const user = this.data.users.find((u) => u.id === userId);
+		if (!user || user.seatIndex === undefined) {
+			return false;
+		}
+
+		return user.seatIndex === this.data.turnData.currentSeatIndex;
 	}
 
 	/**

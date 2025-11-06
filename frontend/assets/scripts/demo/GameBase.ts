@@ -15,7 +15,6 @@ export class GameBase extends Component {
 	public currentPlayer: Node = null!;
 	public currentPlayerId: string = "";
 	public players: Map<string, Node> = new Map();
-	public playerIndex: number = 0;
 	public isGameOver: boolean = false;
 	public currentRoomData: RoomData | null = null;
 
@@ -26,7 +25,7 @@ export class GameBase extends Component {
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData) {
+	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0) {
 		this.roomClient = roomClient;
 		this.currentRoomData = currentRoomData;
 	}

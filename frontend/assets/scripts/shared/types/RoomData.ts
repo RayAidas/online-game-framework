@@ -1,5 +1,6 @@
 import { uint } from "tsrpc-proto";
 import { GamePhase } from "./GamePhase";
+import { TurnData } from "./TurnData";
 import { UserInfo } from "./UserInfo";
 
 export interface RoomData {
@@ -12,6 +13,8 @@ export interface RoomData {
 	users: (UserInfo & { color: { r: uint; g: uint; b: uint } })[];
 	/** 房主用户ID */
 	ownerId: string;
+	/** 回合数据 */
+	turnData?: TurnData;
 	/** 历史消息（只保留最近的 N 条） */
 	messages: {
 		user: UserInfo;

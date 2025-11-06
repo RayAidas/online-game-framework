@@ -84,16 +84,23 @@ export class CardGame extends GameBase {
 	public cards: Card[] = [];
 	public playerCards: { [playerId: string]: Card[] } = {};
 	public lastCards: Card[] = [];
+	public currentSeatIndex: number = 0;
+	public lastPlayedId: string = "";
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData) {
+	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0) {
 		super.init(roomClient, currentRoomData);
 		this.createCards();
 		this.shuffleCards();
 		this.dealCards(5);
-		console.log(this.cards);
-		console.log(this.playerCards);
+		this.currentSeatIndex = firstSeatIndex;
+		if (this.currentPlayerId === this.currentRoomData?.ownerId) {
+			this.roomClient.callApi("InitTurn", {
+				firstPlayerSeatIndex: firstSeatIndex,
+				turnTimeout: 10000,
+			});
+		}
 	}
 
 	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean): void {
@@ -147,21 +154,29 @@ export class CardGame extends GameBase {
 	}
 
 	/** 出牌 */
-	public playCard(playerId: string, cards: Card[]) {
-		if (!this.playerCards[playerId]) {
+	public playCard() {
+		if (this.currentSeatIndex != this.currentRoomData.turnData?.currentSeatIndex) {
+			console.error("当前座位号不匹配，无法出牌");
+			return;
+		}
+		let cards = this.playerCards[this.currentPlayerId].filter((card) => card.selected);
+		if (!this.playerCards[this.currentPlayerId]) {
 			return;
 		}
 		for (let i = 0; i < cards.length; i++) {
 			const card = cards[i];
-			if (!this.playerCards[playerId]) {
+				if (!this.playerCards[this.currentPlayerId]) {
 				return;
 			}
-			const index = this.playerCards[playerId].indexOf(card);
+			const index = this.playerCards[this.currentPlayerId].indexOf(card);
 			if (index !== -1) {
-				this.playerCards[playerId].splice(index, 1);
+				this.playerCards[this.currentPlayerId].splice(index, 1);
 			}
 		}
+		this.currentSeatIndex++;
 		this.lastCards = cards;
+		this.lastPlayedId = this.currentPlayerId;
+		this.roomClient.callApi("NextTurn", { data: { lastPlayedId: this.currentPlayerId } });
 	}
 
 	/** 显示玩家手牌 */
@@ -424,7 +439,7 @@ export class CardGame extends GameBase {
 	/** 过牌 */
 	public pass() {
 		// 玩家选择不出牌
-		return true;
+		this.roomClient.callApi("NextTurn", { data: {} });
 	}
 
 	update(deltaTime: number) {}
