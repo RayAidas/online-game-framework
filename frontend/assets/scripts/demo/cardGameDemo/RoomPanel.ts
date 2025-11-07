@@ -7,7 +7,7 @@ const { ccclass, property } = _decorator;
 export class RoomPanel extends RoomBase {
 	public isFrameSync: boolean = false;
 	public firstPlayerSeatIndex: number = 0;
-	
+
 	start() {}
 
 	public setupEventListeners() {
@@ -39,7 +39,9 @@ export class RoomPanel extends RoomBase {
 
 	public handleTurnChanged(msg: any) {
 		console.log("回合变更:", msg);
-		this.game as CardGame;
+		let game = this.game as CardGame;
+		game.lastCards = msg.turnData.lastData || [];
+		game.lastPlayedId = msg.turnData.lastPlayedId || "";
 	}
 
 	public handleTurnTimeout(msg: any) {

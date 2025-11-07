@@ -1,81 +1,12 @@
-import { _decorator, Prefab } from "cc";
+import { _decorator, Color, Prefab } from "cc";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { WsClient } from "tsrpc-browser";
 import { RoomData } from "../../shared/types/RoomData";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { GameBase } from "../GameBase";
+import { Card } from "./type";
+import { CardIcon, CardName, CardRank, RankCard } from "./Common";
 const { ccclass, property } = _decorator;
-
-interface Card {
-	id: string;
-	tag: number;
-	rank: number;
-	color?: string;
-	name: string;
-	selected?: boolean;
-	isMove?: boolean;
-}
-
-const CardColor = {
-	1: "♥",
-	2: "♦",
-	3: "♠",
-	4: "♣",
-};
-
-const CardName = {
-	1: "A",
-	2: "2",
-	3: "3",
-	4: "4",
-	5: "5",
-	6: "6",
-	7: "7",
-	8: "8",
-	9: "9",
-	10: "10",
-	11: "J",
-	12: "Q",
-	13: "K",
-	14: "小王",
-	15: "大王",
-};
-
-const CardRank = {
-	3: 1,
-	4: 2,
-	5: 3,
-	6: 4,
-	7: 5,
-	8: 6,
-	9: 7,
-	10: 8,
-	11: 9,
-	12: 10,
-	13: 11,
-	1: 12,
-	2: 13,
-	14: 14,
-	15: 15,
-};
-
-const RankCard = {
-	1: 3,
-	2: 4,
-	3: 5,
-	4: 6,
-	5: 7,
-	6: 8,
-	7: 9,
-	8: 10,
-	9: 11,
-	10: 12,
-	11: 13,
-	12: 1,
-	13: 2,
-	14: 14,
-	15: 15,
-};
 
 @ccclass("CardGame")
 export class CardGame extends GameBase {
@@ -113,11 +44,11 @@ export class CardGame extends GameBase {
 	public createCards() {
 		for (let i = 1; i <= 13; i++) {
 			for (let j = 1; j <= 4; j++) {
-				this.cards.push({ id: `${i}_${j}`, tag: i, color: CardColor[j], name: CardName[i], rank: CardRank[i] });
+				this.cards.push({ id: `${i}_${j}`, tag: i, icon: CardIcon[j], name: CardName[i], rank: CardRank[i], color: j > 2 ? Color.BLACK : Color.RED });
 			}
 		}
-		this.cards.push({ id: "14", tag: 14, name: CardName[14], rank: CardRank[14] });
-		this.cards.push({ id: "15", tag: 15, name: CardName[15], rank: CardRank[15] });
+		this.cards.push({ id: "14", tag: 14, name: CardName[14], rank: CardRank[14], color: Color.BLACK });
+		this.cards.push({ id: "15", tag: 15, name: CardName[15], rank: CardRank[15], color: Color.RED });
 	}
 
 	/** 洗牌 */
@@ -155,6 +86,7 @@ export class CardGame extends GameBase {
 
 	/** 出牌 */
 	public playCard() {
+		this.lastCards = [];
 		if (this.currentSeatIndex != this.currentRoomData.turnData?.currentSeatIndex) {
 			console.error("当前座位号不匹配，无法出牌");
 			return;
@@ -165,7 +97,7 @@ export class CardGame extends GameBase {
 		}
 		for (let i = 0; i < cards.length; i++) {
 			const card = cards[i];
-				if (!this.playerCards[this.currentPlayerId]) {
+			if (!this.playerCards[this.currentPlayerId]) {
 				return;
 			}
 			const index = this.playerCards[this.currentPlayerId].indexOf(card);
@@ -176,7 +108,7 @@ export class CardGame extends GameBase {
 		this.currentSeatIndex++;
 		this.lastCards = cards;
 		this.lastPlayedId = this.currentPlayerId;
-		this.roomClient.callApi("NextTurn", { data: { lastPlayedId: this.currentPlayerId } });
+		this.roomClient.callApi("NextTurn", { data: { lastPlayedId: this.currentPlayerId, lastCards: cards } });
 	}
 
 	/** 显示玩家手牌 */

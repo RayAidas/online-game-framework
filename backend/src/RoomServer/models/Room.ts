@@ -302,6 +302,7 @@ export class Room {
 		this.data.turnData.turnNumber++;
 		this.data.turnData.turnStartTime = Date.now();
 		if(data.lastPlayedId != void 0) this.data.turnData.lastPlayedId = data.lastPlayedId;
+		if(data.lastCards != void 0) this.data.turnData.lastData = data.lastCards;
 		// 获取当前回合玩家信息
 		const currentPlayer = this.data.users.find((u) => u.seatIndex === nextSeatIndex);
 

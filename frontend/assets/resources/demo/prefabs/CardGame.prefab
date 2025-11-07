@@ -1435,7 +1435,7 @@
       "__id__": 1
     },
     "component": "",
-    "_componentId": "55b33Nl6nJGGb5S2qKzGVAX",
+    "_componentId": "c2ae5MOUsdN+ospwudakndr",
     "handler": "backHome",
     "customEventData": ""
   },
@@ -1677,9 +1677,16 @@
     "__prefab": {
       "__id__": 68
     },
-    "overPanel": null,
-    "overLabel": null,
-    "cardPrefab": null,
+    "overPanel": {
+      "__id__": 32
+    },
+    "overLabel": {
+      "__id__": 36
+    },
+    "cardPrefab": {
+      "__uuid__": "b70fcc89-e53d-4672-976d-64ce36a17428",
+      "__expectedType__": "cc.Prefab"
+    },
     "_id": ""
   },
   {
