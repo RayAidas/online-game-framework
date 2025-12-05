@@ -25,9 +25,13 @@ export class GameBase extends Component {
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0) {
+	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0, currentUserId: string = "") {
 		this.roomClient = roomClient;
 		this.currentRoomData = currentRoomData;
+		// 如果传入了当前用户ID，则设置
+		if (currentUserId) {
+			this.currentPlayerId = currentUserId;
+		}
 	}
 
 	/**

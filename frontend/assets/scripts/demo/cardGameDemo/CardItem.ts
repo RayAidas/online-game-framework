@@ -1,4 +1,4 @@
-import { _decorator, Component, Label } from "cc";
+import { _decorator, Color, Component, Label } from "cc";
 import { Card } from "./type";
 const { ccclass, property } = _decorator;
 
@@ -12,6 +12,8 @@ export class CardItem extends Component {
 	init(card: Card) {
 		this.cardName.string = card.name;
 		this.cardIcon.string = card.icon;
+		this.cardName.color = card.color;
+		this.cardIcon.color = card.color;
 	}
 
 	update(deltaTime: number) {}

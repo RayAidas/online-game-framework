@@ -213,8 +213,11 @@ export class Room {
 			this.frameSyncService = null;
 		}
 
-		// 清理回合定时器
-		this.clearTurnTimer();
+		// 清理回合制
+		if (this.data.turnData?.isEnabled) {
+			this.logger.log("[Destroy] 终止回合制");
+			this.endTurnBased();
+		}
 
 		// 清理房间状态
 		RoomStateService.clearRoomState(this.data.id);

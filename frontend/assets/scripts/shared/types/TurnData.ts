@@ -16,4 +16,6 @@ export interface TurnData {
 	isEnabled: boolean;
 	/** 最后一个操作的玩家ID */
 	lastPlayedId?: string;
+	/** 最后一个操作的数据 */
+	lastData?: any;
 }

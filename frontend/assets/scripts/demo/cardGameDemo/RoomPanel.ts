@@ -23,7 +23,9 @@ export class RoomPanel extends RoomBase {
 	public handleGameStarted(msg: any) {
 		let gameNode = instantiate(this.gamePrefab);
 		this.game = gameNode.getComponent(CardGame);
-		this.game.init(this.roomClient, this.currentRoomData, this.firstPlayerSeatIndex);
+		// 传入当前用户ID，以便在init中初始化currentPlayerId
+		const currentUserId = this.currentUser ? this.currentUser.id : "";
+		this.game.init(this.roomClient, this.currentRoomData, this.firstPlayerSeatIndex, currentUserId);
 		this.node.parent.addChild(gameNode);
 		this.callSetReady(false);
 		if (this.game) {
@@ -34,6 +36,10 @@ export class RoomPanel extends RoomBase {
 					this.game.createPlayer(user, isCurrentPlayer);
 				});
 			}
+
+			// 所有玩家创建完成后，初始化回合制
+			const cardGame = this.game as CardGame;
+			cardGame.initTurnBased(this.firstPlayerSeatIndex, 30000); // 30秒超时
 		}
 	}
 

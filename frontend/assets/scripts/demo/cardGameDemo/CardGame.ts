@@ -1,16 +1,18 @@
-import { _decorator, Color, Prefab } from "cc";
+import { _decorator, Color, instantiate, Node, Prefab } from "cc";
 import { ServiceType as RoomServiceType } from "db://assets/scripts/shared/protocols/serviceProto_roomServer";
 import { WsClient } from "tsrpc-browser";
 import { RoomData } from "../../shared/types/RoomData";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { GameBase } from "../GameBase";
-import { Card } from "./type";
 import { CardIcon, CardName, CardRank, RankCard } from "./Common";
+import { Card } from "./type";
+import { CardItem } from "./CardItem";
 const { ccclass, property } = _decorator;
 
 @ccclass("CardGame")
 export class CardGame extends GameBase {
 	@property(Prefab) cardPrefab: Prefab = null!;
+	@property(Node) cardContainer: Node = null!;
 
 	public cards: Card[] = [];
 	public playerCards: { [playerId: string]: Card[] } = {};
@@ -20,18 +22,65 @@ export class CardGame extends GameBase {
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0) {
-		super.init(roomClient, currentRoomData);
+	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0, currentUserId: string = "") {
+		super.init(roomClient, currentRoomData, firstSeatIndex, currentUserId);
+
+		console.log("初始化 CardGame, currentPlayerId:", this.currentPlayerId);
+
 		this.createCards();
 		this.shuffleCards();
 		this.dealCards(5);
+		this.showPlayerCards();
 		this.currentSeatIndex = firstSeatIndex;
-		if (this.currentPlayerId === this.currentRoomData?.ownerId) {
-			this.roomClient.callApi("InitTurn", {
-				firstPlayerSeatIndex: firstSeatIndex,
-				turnTimeout: 10000,
-			});
+		// 监听回合变更消息
+		this.roomClient.listenMsg("serverMsg/TurnChanged", (msg) => {
+			console.log("[TurnChanged]", msg);
+			// 更新房间数据中的回合信息
+			this.currentRoomData.turnData = msg.turnData;
+			// 更新上一次出牌的数据
+			if (msg.turnData.lastData) {
+				this.lastCards = msg.turnData.lastData;
+			}
+			if (msg.turnData.lastPlayedId) {
+				this.lastPlayedId = msg.turnData.lastPlayedId;
+			}
+			// 可以在这里添加UI更新逻辑
+			console.log(`当前回合: 第${msg.turnData.turnNumber}回合, 座位号: ${msg.turnData.currentSeatIndex}`);
+			if (msg.currentPlayer) {
+				console.log(`当前玩家: ${msg.currentPlayer.nickname}`);
+			}
+		});
+
+		// 监听回合超时消息
+		this.roomClient.listenMsg("serverMsg/TurnTimeout", (msg) => {
+			console.log("[TurnTimeout] 回合超时");
+		});
+	}
+
+	/**
+	 * 初始化回合制（由房主调用）
+	 */
+	public initTurnBased(firstSeatIndex: number = 0, turnTimeout: number = 30000) {
+		console.log("准备初始化回合制...", this.currentPlayerId, this.currentRoomData?.ownerId);
+
+		// 检查是否是房主
+		if (this.currentPlayerId !== this.currentRoomData?.ownerId) {
+			console.log("不是房主，无需初始化回合制");
+			return;
 		}
+
+		console.log("房主初始化回合制");
+		this.roomClient
+			.callApi("InitTurn", {
+				firstPlayerSeatIndex: firstSeatIndex,
+				turnTimeout: turnTimeout,
+			})
+			.then((res) => {
+				console.log("回合制初始化成功", res);
+			})
+			.catch((err) => {
+				console.error("回合制初始化失败:", err);
+			});
 	}
 
 	public createPlayer(user: UserInfo & { color: { r: number; g: number; b: number } }, isCurrentPlayer: boolean): void {
@@ -84,31 +133,67 @@ export class CardGame extends GameBase {
 		}
 	}
 
-	/** 出牌 */
 	public playCard() {
-		this.lastCards = [];
-		if (this.currentSeatIndex != this.currentRoomData.turnData?.currentSeatIndex) {
-			console.error("当前座位号不匹配，无法出牌");
+		// 检查回合制是否已初始化
+		if (!this.currentRoomData.turnData) {
+			console.error("回合制未初始化，请等待游戏开始");
 			return;
 		}
-		let cards = this.playerCards[this.currentPlayerId].filter((card) => card.selected);
-		if (!this.playerCards[this.currentPlayerId]) {
+
+		// 获取当前玩家的座位号
+		const currentUser = this.currentRoomData.users.find((u) => u.id === this.currentPlayerId);
+		if (!currentUser || currentUser.seatIndex === undefined) {
+			console.error("无法获取当前玩家的座位号");
 			return;
 		}
+
+		// 检查是否轮到当前玩家
+		if (currentUser.seatIndex !== this.currentRoomData.turnData.currentSeatIndex) {
+			console.error(`不是你的回合！当前回合座位号: ${this.currentRoomData.turnData.currentSeatIndex}, 你的座位号: ${currentUser.seatIndex}`);
+			return;
+		}
+
+		// 获取选中的牌
+		const cards = this.playerCards[this.currentPlayerId]?.filter((card) => card.selected);
+		if (!cards || cards.length === 0) {
+			console.error("请选择要出的牌");
+			return;
+		}
+
+		// 检查出牌是否合法
+		if (!this.checkCardValid(cards)) {
+			console.error("出牌不合法");
+			return;
+		}
+
+		// 从手牌中移除出的牌
 		for (let i = 0; i < cards.length; i++) {
 			const card = cards[i];
-			if (!this.playerCards[this.currentPlayerId]) {
-				return;
-			}
 			const index = this.playerCards[this.currentPlayerId].indexOf(card);
 			if (index !== -1) {
 				this.playerCards[this.currentPlayerId].splice(index, 1);
 			}
 		}
-		this.currentSeatIndex++;
+		// 更新本地状态
 		this.lastCards = cards;
 		this.lastPlayedId = this.currentPlayerId;
-		this.roomClient.callApi("NextTurn", { data: { lastPlayedId: this.currentPlayerId, lastCards: cards } });
+
+		console.log(`出牌成功: ${cards.map((c) => c.name).join(", ")}`);
+
+		// 调用API结束回合
+		this.roomClient
+			.callApi("NextTurn", {
+				data: {
+					lastPlayedId: this.currentPlayerId,
+					lastCards: cards,
+				},
+			})
+			.then(() => {
+				console.log("回合结束成功");
+			})
+			.catch((err) => {
+				console.error("回合结束失败:", err);
+			});
 	}
 
 	/** 显示玩家手牌 */
@@ -119,6 +204,9 @@ export class CardGame extends GameBase {
 		const cards = this.playerCards[this.currentPlayerId];
 		for (let i = 0; i < cards.length; i++) {
 			const card = cards[i];
+			const cardNode = instantiate(this.cardPrefab);
+			cardNode.parent = this.cardContainer;
+			// cardNode.getComponent(CardItem).init(card);
 		}
 	}
 
@@ -370,8 +458,48 @@ export class CardGame extends GameBase {
 
 	/** 过牌 */
 	public pass() {
-		// 玩家选择不出牌
-		this.roomClient.callApi("NextTurn", { data: {} });
+		// 检查回合制是否已初始化
+		if (!this.currentRoomData.turnData) {
+			console.error("回合制未初始化");
+			return false;
+		}
+
+		// 检查是否轮到当前玩家
+		if (!this.isMyTurn()) {
+			console.error("不是你的回合，无法过牌");
+			return false;
+		}
+
+		console.log("过牌");
+
+		// 调用API结束回合（不出牌）
+		this.roomClient
+			.callApi("NextTurn", {
+				data: {
+					lastPlayedId: this.currentPlayerId,
+					lastCards: [], // 空数组表示过牌
+				},
+			})
+			.then(() => {
+				console.log("过牌成功");
+			})
+			.catch((err) => {
+				console.error("过牌失败:", err);
+			});
+
+		return true;
+	}
+
+	/** 检查是否轮到当前玩家 */
+	public isMyTurn(): boolean {
+		if (!this.currentRoomData.turnData) {
+			return false;
+		}
+		const currentUser = this.currentRoomData.users.find((u) => u.id === this.currentPlayerId);
+		if (!currentUser || currentUser.seatIndex === undefined) {
+			return false;
+		}
+		return currentUser.seatIndex === this.currentRoomData.turnData.currentSeatIndex;
 	}
 
 	update(deltaTime: number) {}
