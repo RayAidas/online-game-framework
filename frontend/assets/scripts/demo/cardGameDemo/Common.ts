@@ -3,6 +3,8 @@ export const CardIcon = {
 	2: "♦",
 	3: "♠",
 	4: "♣",
+	5: "🃟",
+	6: "🃟",
 };
 
 export const CardName = {
@@ -19,8 +21,8 @@ export const CardName = {
 	11: "J",
 	12: "Q",
 	13: "K",
-	14: "小王",
-	15: "大王",
+	14: "🃟",
+	15: "🃟",
 };
 
 export const CardRank = {

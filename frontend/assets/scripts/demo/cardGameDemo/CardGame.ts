@@ -4,9 +4,9 @@ import { WsClient } from "tsrpc-browser";
 import { RoomData } from "../../shared/types/RoomData";
 import { UserInfo } from "../../shared/types/UserInfo";
 import { GameBase } from "../GameBase";
+import { CardItem } from "./CardItem";
 import { CardIcon, CardName, CardRank, RankCard } from "./Common";
 import { Card } from "./type";
-import { CardItem } from "./CardItem";
 const { ccclass, property } = _decorator;
 
 @ccclass("CardGame")
@@ -96,8 +96,8 @@ export class CardGame extends GameBase {
 				this.cards.push({ id: `${i}_${j}`, tag: i, icon: CardIcon[j], name: CardName[i], rank: CardRank[i], color: j > 2 ? Color.BLACK : Color.RED });
 			}
 		}
-		this.cards.push({ id: "14", tag: 14, name: CardName[14], rank: CardRank[14], color: Color.BLACK });
-		this.cards.push({ id: "15", tag: 15, name: CardName[15], rank: CardRank[15], color: Color.RED });
+		this.cards.push({ id: "14", tag: 14,icon: CardIcon[5], name: CardName[14], rank: CardRank[14], color: Color.BLACK });
+		this.cards.push({ id: "15", tag: 15,icon: CardIcon[6], name: CardName[15], rank: CardRank[15], color: Color.RED });
 	}
 
 	/** 洗牌 */
@@ -201,12 +201,47 @@ export class CardGame extends GameBase {
 		if (!this.playerCards[this.currentPlayerId]) {
 			return;
 		}
+
+		// 清空容器中的旧卡牌
+		this.cardContainer.removeAllChildren();
+
+		// 获取并排序手牌
 		const cards = this.playerCards[this.currentPlayerId];
-		for (let i = 0; i < cards.length; i++) {
-			const card = cards[i];
+		const sortedCards = [...cards].sort((a, b) => {
+			// 先按rank排序，rank相同则按tag排序
+			if (a.rank !== b.rank) {
+				return a.rank - b.rank;
+			}
+			return a.tag - b.tag;
+		});
+
+		// 计算卡牌间距和起始位置
+		const cardWidth = 150; // 卡牌宽度（与prefab中的宽度一致）
+		const cardSpacing = -100; // 卡牌之间的间距（紧凑排列）
+		const totalWidth = sortedCards.length * cardWidth + (sortedCards.length - 1) * cardSpacing;
+		const startX = -totalWidth / 2 + cardWidth / 2;
+
+		// 创建并排列卡牌
+		for (let i = 0; i < sortedCards.length; i++) {
+			const card = sortedCards[i];
 			const cardNode = instantiate(this.cardPrefab);
 			cardNode.parent = this.cardContainer;
-			// cardNode.getComponent(CardItem).init(card);
+
+			// 检查并获取CardItem组件
+			let cardItem = cardNode.getComponent(CardItem);
+			if (!cardItem) {
+				// 如果组件不存在，尝试添加
+				cardItem = cardNode.addComponent(CardItem);
+				console.warn("CardItem组件不存在，已自动添加");
+			}
+
+			if (cardItem) {
+				cardItem.init(card);
+			}
+
+			// 设置卡牌位置，按顺序排列
+			const x = startX + i * (cardWidth + cardSpacing);
+			cardNode.setPosition(x, 0, 0);
 		}
 	}
 

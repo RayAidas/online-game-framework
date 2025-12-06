@@ -39,7 +39,7 @@ export class RoomPanel extends RoomBase {
 
 			// 所有玩家创建完成后，初始化回合制
 			const cardGame = this.game as CardGame;
-			cardGame.initTurnBased(this.firstPlayerSeatIndex, 30000); // 30秒超时
+			cardGame.initTurnBased(this.firstPlayerSeatIndex, 10000); // 10秒超时
 		}
 	}
 
