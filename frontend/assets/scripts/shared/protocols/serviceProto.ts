@@ -12,6 +12,7 @@ import { ReqEndTurn, ResEndTurn } from './roomServer/PtlEndTurn';
 import { ReqExitGame, ResExitGame } from './roomServer/PtlExitGame';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
+import { ReqGetGameState, ResGetGameState } from './roomServer/PtlGetGameState';
 import { ReqInitTurn, ResInitTurn } from './roomServer/PtlInitTurn';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqNextTurn, ResNextTurn } from './roomServer/PtlNextTurn';
@@ -22,6 +23,7 @@ import { ReqResumeFrameSync, ResResumeFrameSync } from './roomServer/PtlResumeFr
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
+import { ReqSyncGameState, ResSyncGameState } from './roomServer/PtlSyncGameState';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgExitGame } from './roomServer/serverMsg/MsgExitGame';
 import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
@@ -86,6 +88,10 @@ export interface ServiceType {
             req: ReqGameOver,
             res: ResGameOver
         },
+        "roomServer/GetGameState": {
+            req: ReqGetGameState,
+            res: ResGetGameState
+        },
         "roomServer/InitTurn": {
             req: ReqInitTurn,
             res: ResInitTurn
@@ -126,6 +132,10 @@ export interface ServiceType {
             req: ReqSetReady,
             res: ResSetReady
         },
+        "roomServer/SyncGameState": {
+            req: ReqSyncGameState,
+            res: ResSyncGameState
+        },
         "userServer/Login": {
             req: ReqLogin,
             res: ResLogin
@@ -160,7 +170,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 50,
+    "version": 51,
     "services": [
         {
             "id": 31,
@@ -254,6 +264,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
             }
         },
         {
+            "id": 56,
+            "name": "roomServer/GetGameState",
+            "type": "api"
+        },
+        {
             "id": 52,
             "name": "roomServer/InitTurn",
             "type": "api"
@@ -322,6 +337,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 32,
             "name": "roomServer/SetReady",
+            "type": "api"
+        },
+        {
+            "id": 57,
+            "name": "roomServer/SyncGameState",
             "type": "api"
         },
         {
@@ -977,6 +997,29 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "roomServer/PtlGetGameState/ReqGetGameState": {
+            "type": "Interface"
+        },
+        "roomServer/PtlGetGameState/ResGetGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
+                },
+                {
+                    "id": 1,
+                    "name": "hasState",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
         "roomServer/PtlInitTurn/ReqInitTurn": {
             "type": "Interface",
             "properties": [
@@ -1315,6 +1358,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Boolean"
                     }
+                },
+                {
+                    "id": 13,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -1725,6 +1776,31 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 0,
                     "name": "needLogin",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
+        "roomServer/PtlSyncGameState/ReqSyncGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "roomServer/PtlSyncGameState/ResSyncGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "success",
                     "type": {
                         "type": "Boolean"
                     }

@@ -14,6 +14,7 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 
 	// 从Redis获取用户的房间信息
 	const roomInfo = await RedisRoomStateService.getUserRoomInfo(call.currentUser.uid);
+	const roomUsers = await RedisRoomStateService.getRoomUsers(roomInfo?.roomId);
 
 	if (!roomInfo) {
 		return call.error("没有找到之前的房间信息", { code: "NO_ROOM_INFO" });
@@ -34,10 +35,12 @@ export async function ApiRejoinRoom(call: ApiCall<ReqRejoinRoom, ResRejoinRoom>)
 	const currentUser: UserInfo = {
 		id: call.currentUser.uid.toString(),
 		nickname: roomInfo.nickname || "玩家",
-		gamePhase: roomInfo.gamePhase || GamePhase.WAITING,
+		gamePhase: roomUsers.length <= 1 ? GamePhase.WAITING : roomInfo.gamePhase || GamePhase.WAITING,
 	};
 	conn.currentUser = currentUser;
-
+	if (roomUsers && roomUsers.length <= 1) {
+		room.data.gamePhase = GamePhase.WAITING;
+	}
 	// 检查用户是否已经在其他连接中
 	let existedConns = room.conns.filter((v) => v.currentUser!.id === currentUser.id);
 	existedConns.forEach((v) => {

@@ -41,4 +41,7 @@ export interface RoomData {
 
 	/** 是否开启帧同步 */
 	isFrameSync: boolean;
+
+	/** 游戏状态数据（由具体游戏逻辑定义） */
+	gameState?: any;
 }

@@ -22,15 +22,25 @@ export class CardGame extends GameBase {
 
 	start() {}
 
-	public init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0, currentUserId: string = "") {
+	public async init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0, currentUserId: string = "") {
 		super.init(roomClient, currentRoomData, firstSeatIndex, currentUserId);
 
 		console.log("初始化 CardGame, currentPlayerId:", this.currentPlayerId);
 
-		this.createCards();
-		this.shuffleCards();
-		this.dealCards(5);
+		// 尝试从服务端恢复游戏状态
+		const restored = await this.restoreGameState();
+
+		if (!restored) {
+			// 如果没有保存的状态，则初始化新游戏
+			console.log("没有保存的游戏状态，初始化新游戏");
+			this.createCards();
+			this.shuffleCards();
+			this.dealCards(5);
+		} else {
+			console.log("成功恢复游戏状态");
+		}
 		this.showPlayerCards();
+
 		this.currentSeatIndex = firstSeatIndex;
 		// 监听回合变更消息
 		this.roomClient.listenMsg("serverMsg/TurnChanged", (msg) => {
@@ -96,8 +106,8 @@ export class CardGame extends GameBase {
 				this.cards.push({ id: `${i}_${j}`, tag: i, icon: CardIcon[j], name: CardName[i], rank: CardRank[i], color: j > 2 ? Color.BLACK : Color.RED });
 			}
 		}
-		this.cards.push({ id: "14", tag: 14,icon: CardIcon[5], name: CardName[14], rank: CardRank[14], color: Color.BLACK });
-		this.cards.push({ id: "15", tag: 15,icon: CardIcon[6], name: CardName[15], rank: CardRank[15], color: Color.RED });
+		this.cards.push({ id: "14", tag: 14, icon: CardIcon[5], name: CardName[14], rank: CardRank[14], color: Color.BLACK });
+		this.cards.push({ id: "15", tag: 15, icon: CardIcon[6], name: CardName[15], rank: CardRank[15], color: Color.RED });
 	}
 
 	/** 洗牌 */
@@ -120,6 +130,9 @@ export class CardGame extends GameBase {
 				this.playerCards[user.id].push(card);
 			}
 		}
+
+		// 发牌后同步游戏状态到服务端
+		this.syncGameState();
 	}
 
 	/** 摸牌 */
@@ -179,6 +192,9 @@ export class CardGame extends GameBase {
 		this.lastPlayedId = this.currentPlayerId;
 
 		console.log(`出牌成功: ${cards.map((c) => c.name).join(", ")}`);
+
+		// 同步游戏状态到服务端
+		this.syncGameState();
 
 		// 调用API结束回合
 		this.roomClient
@@ -535,6 +551,141 @@ export class CardGame extends GameBase {
 			return false;
 		}
 		return currentUser.seatIndex === this.currentRoomData.turnData.currentSeatIndex;
+	}
+
+	/**
+	 * 序列化卡牌数据（将Color对象转换为可序列化的格式）
+	 */
+	private serializeCard(card: Card): any {
+		return {
+			id: card.id,
+			tag: card.tag,
+			rank: card.rank,
+			icon: card.icon,
+			name: card.name,
+			selected: card.selected,
+			isMove: card.isMove,
+			// 将Color对象转换为RGBA值
+			color: card.color
+				? {
+						r: card.color.r,
+						g: card.color.g,
+						b: card.color.b,
+						a: card.color.a,
+				  }
+				: undefined,
+		};
+	}
+
+	/**
+	 * 反序列化卡牌数据（将RGBA值转换回Color对象）
+	 */
+	private deserializeCard(data: any): Card {
+		return {
+			id: data.id,
+			tag: data.tag,
+			rank: data.rank,
+			icon: data.icon,
+			name: data.name,
+			selected: data.selected,
+			isMove: data.isMove,
+			// 将RGBA值转换回Color对象
+			color: data.color ? new Color(data.color.r, data.color.g, data.color.b, data.color.a) : undefined,
+		};
+	}
+
+	/**
+	 * 获取当前游戏状态
+	 */
+	private getGameState() {
+		// 序列化所有卡牌数据
+		const serializedCards = this.cards.map((card) => this.serializeCard(card));
+		const serializedPlayerCards: { [playerId: string]: any[] } = {};
+		for (const playerId in this.playerCards) {
+			if (this.playerCards.hasOwnProperty(playerId)) {
+				serializedPlayerCards[playerId] = this.playerCards[playerId].map((card) => this.serializeCard(card));
+			}
+		}
+		const serializedLastCards = this.lastCards.map((card) => this.serializeCard(card));
+
+		return {
+			cards: serializedCards,
+			playerCards: serializedPlayerCards,
+			lastCards: serializedLastCards,
+			lastPlayedId: this.lastPlayedId,
+			currentSeatIndex: this.currentSeatIndex,
+		};
+	}
+
+	/**
+	 * 同步游戏状态到服务端
+	 */
+	private syncGameState() {
+		const gameState = this.getGameState();
+		this.roomClient
+			.callApi("SyncGameState", { gameState })
+			.then(() => {
+				console.log("[SyncGameState] 游戏状态已同步");
+			})
+			.catch((err) => {
+				console.error("[SyncGameState] 同步失败:", err);
+			});
+	}
+
+	/**
+	 * 从服务端恢复游戏状态
+	 * @returns true表示成功恢复，false表示没有保存的状态
+	 */
+	private async restoreGameState(): Promise<boolean> {
+		try {
+			const res = await this.roomClient.callApi("GetGameState", {});
+
+			if (res.isSucc && res.res.hasState && res.res.gameState) {
+				const state = res.res.gameState;
+				console.log("[RestoreGameState] 恢复游戏状态:", state);
+
+				// 反序列化卡牌数据
+				this.cards = (state.cards || []).map((data: any) => this.deserializeCard(data));
+
+				// 反序列化玩家手牌
+				this.playerCards = {};
+				if (state.playerCards) {
+					for (const playerId in state.playerCards) {
+						if (state.playerCards.hasOwnProperty(playerId)) {
+							this.playerCards[playerId] = state.playerCards[playerId].map((data: any) => this.deserializeCard(data));
+						}
+					}
+				}
+
+				// 反序列化上次出的牌
+				this.lastCards = (state.lastCards || []).map((data: any) => this.deserializeCard(data));
+
+				this.lastPlayedId = state.lastPlayedId || "";
+				this.currentSeatIndex = state.currentSeatIndex || 0;
+
+				console.log("[RestoreGameState] 恢复完成, 手牌数量:", Object.keys(this.playerCards).length);
+
+				return true;
+			}
+
+			return false;
+		} catch (err) {
+			console.error("[RestoreGameState] 恢复失败:", err);
+			return false;
+		}
+	}
+
+	/**
+	 * 组件销毁时清理
+	 */
+	onDestroy() {
+		console.log("[CardGame] 组件销毁，清理数据");
+		// 清空所有游戏数据
+		this.cards = [];
+		this.playerCards = {};
+		this.lastCards = [];
+		this.lastPlayedId = "";
+		this.currentSeatIndex = 0;
 	}
 
 	update(deltaTime: number) {}

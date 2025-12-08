@@ -7,6 +7,7 @@ import { ReqEndTurn, ResEndTurn } from './roomServer/PtlEndTurn';
 import { ReqExitGame, ResExitGame } from './roomServer/PtlExitGame';
 import { ReqExitRoom, ResExitRoom } from './roomServer/PtlExitRoom';
 import { ReqGameOver, ResGameOver } from './roomServer/PtlGameOver';
+import { ReqGetGameState, ResGetGameState } from './roomServer/PtlGetGameState';
 import { ReqInitTurn, ResInitTurn } from './roomServer/PtlInitTurn';
 import { ReqJoinRoom, ResJoinRoom } from './roomServer/PtlJoinRoom';
 import { ReqNextTurn, ResNextTurn } from './roomServer/PtlNextTurn';
@@ -17,6 +18,7 @@ import { ReqResumeFrameSync, ResResumeFrameSync } from './roomServer/PtlResumeFr
 import { ReqSendChat, ResSendChat } from './roomServer/PtlSendChat';
 import { ReqSendInput, ResSendInput } from './roomServer/PtlSendInput';
 import { ReqSetReady, ResSetReady } from './roomServer/PtlSetReady';
+import { ReqSyncGameState, ResSyncGameState } from './roomServer/PtlSyncGameState';
 import { MsgChat } from './roomServer/serverMsg/MsgChat';
 import { MsgExitGame } from './roomServer/serverMsg/MsgExitGame';
 import { MsgGameOver } from './roomServer/serverMsg/MsgGameOver';
@@ -58,6 +60,10 @@ export interface ServiceType {
             req: ReqGameOver,
             res: ResGameOver
         },
+        "GetGameState": {
+            req: ReqGetGameState,
+            res: ResGetGameState
+        },
         "InitTurn": {
             req: ReqInitTurn,
             res: ResInitTurn
@@ -97,6 +103,10 @@ export interface ServiceType {
         "SetReady": {
             req: ReqSetReady,
             res: ResSetReady
+        },
+        "SyncGameState": {
+            req: ReqSyncGameState,
+            res: ResSyncGameState
         }
     },
     msg: {
@@ -120,7 +130,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 29,
+    "version": 30,
     "services": [
         {
             "id": 11,
@@ -177,6 +187,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
             "conf": {
                 "needLogin": true
             }
+        },
+        {
+            "id": 38,
+            "name": "GetGameState",
+            "type": "api"
         },
         {
             "id": 34,
@@ -247,6 +262,11 @@ export const serviceProto: ServiceProto<ServiceType> = {
         {
             "id": 14,
             "name": "SetReady",
+            "type": "api"
+        },
+        {
+            "id": 39,
+            "name": "SyncGameState",
             "type": "api"
         },
         {
@@ -640,6 +660,29 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 }
             ]
         },
+        "PtlGetGameState/ReqGetGameState": {
+            "type": "Interface"
+        },
+        "PtlGetGameState/ResGetGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
+                },
+                {
+                    "id": 1,
+                    "name": "hasState",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
         "PtlInitTurn/ReqInitTurn": {
             "type": "Interface",
             "properties": [
@@ -978,6 +1021,14 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "type": {
                         "type": "Boolean"
                     }
+                },
+                {
+                    "id": 13,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
                 }
             ]
         },
@@ -1388,6 +1439,31 @@ export const serviceProto: ServiceProto<ServiceType> = {
                 {
                     "id": 0,
                     "name": "needLogin",
+                    "type": {
+                        "type": "Boolean"
+                    }
+                }
+            ]
+        },
+        "PtlSyncGameState/ReqSyncGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "gameState",
+                    "type": {
+                        "type": "Any"
+                    },
+                    "optional": true
+                }
+            ]
+        },
+        "PtlSyncGameState/ResSyncGameState": {
+            "type": "Interface",
+            "properties": [
+                {
+                    "id": 0,
+                    "name": "success",
                     "type": {
                         "type": "Boolean"
                     }

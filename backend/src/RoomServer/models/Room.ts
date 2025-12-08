@@ -290,9 +290,7 @@ export class Room {
 	/**
 	 * 切换到下一个玩家的回合
 	 */
-	nextTurn(data: {
-		[key: string]: any;
-	}) {
+	nextTurn(data: { [key: string]: any }) {
 		if (!this.data.turnData || !this.data.turnData.isEnabled) {
 			this.logger.log("[TurnBased] 回合制未启用");
 			return;
@@ -304,8 +302,8 @@ export class Room {
 		this.data.turnData.currentSeatIndex = nextSeatIndex;
 		this.data.turnData.turnNumber++;
 		this.data.turnData.turnStartTime = Date.now();
-		if(data.lastPlayedId != void 0) this.data.turnData.lastPlayedId = data.lastPlayedId;
-		if(data.lastCards != void 0) this.data.turnData.lastData = data.lastCards;
+		if (data.lastPlayedId != void 0) this.data.turnData.lastPlayedId = data.lastPlayedId;
+		if (data.lastCards != void 0) this.data.turnData.lastData = data.lastCards;
 		// 获取当前回合玩家信息
 		const currentPlayer = this.data.users.find((u) => u.seatIndex === nextSeatIndex);
 
@@ -319,7 +317,9 @@ export class Room {
 
 		// 重启超时定时器
 		if (this.data.turnData.turnTimeout > 0) {
-			this.startTurnTimer();
+			if (this.data.gamePhase === GamePhase.PLAYING) {
+				this.startTurnTimer();
+			}
 		}
 	}
 
