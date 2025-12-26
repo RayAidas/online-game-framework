@@ -13,6 +13,7 @@ const { ccclass, property } = _decorator;
 export class CardGame extends GameBase {
 	@property(Prefab) cardPrefab: Prefab = null!;
 	@property(Node) cardContainer: Node = null!;
+	@property(Node) lastCardsContainer: Node = null!;
 
 	public cards: Card[] = [];
 	public playerCards: { [playerId: string]: Card[] } = {};
@@ -25,45 +26,98 @@ export class CardGame extends GameBase {
 	public async init(roomClient: WsClient<RoomServiceType>, currentRoomData: RoomData, firstSeatIndex: number = 0, currentUserId: string = "") {
 		super.init(roomClient, currentRoomData, firstSeatIndex, currentUserId);
 
-		console.log("初始化 CardGame, currentPlayerId:", this.currentPlayerId);
-
 		// 尝试从服务端恢复游戏状态
 		const restored = await this.restoreGameState();
 
 		if (!restored) {
-			// 如果没有保存的状态，则初始化新游戏
-			console.log("没有保存的游戏状态，初始化新游戏");
-			this.createCards();
-			this.shuffleCards();
-			this.dealCards(5);
-		} else {
-			console.log("成功恢复游戏状态");
+			// 如果没有保存的状态
+			if (this.currentPlayerId === currentRoomData.ownerId) {
+				// 只有房主才创建牌库、洗牌、发牌
+				this.createCards();
+				this.shuffleCards();
+				// 先给所有玩家发5张牌
+				this.dealCards(5);
+				// 房主额外多发一张牌
+				this.drawCard(currentRoomData.ownerId, 1);
+			} else {
+				// 非房主等待房主同步游戏状态
+				await this.waitForGameState();
+			}
 		}
 		this.showPlayerCards();
+		this.showLastCards(); // 显示上次出的牌（如果有）
 
 		this.currentSeatIndex = firstSeatIndex;
 		// 监听回合变更消息
 		this.roomClient.listenMsg("serverMsg/TurnChanged", (msg) => {
-			console.log("[TurnChanged]", msg);
 			// 更新房间数据中的回合信息
 			this.currentRoomData.turnData = msg.turnData;
-			// 更新上一次出牌的数据
-			if (msg.turnData.lastData) {
-				this.lastCards = msg.turnData.lastData;
+
+			// 检查是否轮到当前玩家，且上一次出牌的也是自己（无人接牌）
+			const currentUser = this.currentRoomData.users.find((u) => u.id === this.currentPlayerId);
+			if (currentUser && currentUser.seatIndex === msg.turnData.currentSeatIndex) {
+				// 轮到自己了
+				// 使用服务器传来的 lastPlayedId 判断（确保类型一致）
+				const serverLastPlayedId = String(msg.turnData.lastPlayedId || "");
+				const myId = String(this.currentPlayerId);
+				const hasLastCards = msg.turnData.lastData && Array.isArray(msg.turnData.lastData) && msg.turnData.lastData.length > 0;
+
+				if (serverLastPlayedId === myId && hasLastCards) {
+					// 上一次出牌的也是自己，说明一圈下来没人接牌，可以摸一张牌
+					if (this.cards && this.cards.length > 0) {
+						this.drawCard(this.currentPlayerId, 1);
+						// 刷新显示手牌
+						this.showPlayerCards();
+						// 清空上次出的牌（新一轮开始）
+						this.lastCards = [];
+						this.lastPlayedId = "";
+						this.showLastCards();
+					}
+				} else {
+					// 更新本地的 lastPlayedId 和 lastCards
+					if (msg.turnData.lastPlayedId) {
+						this.lastPlayedId = String(msg.turnData.lastPlayedId);
+					}
+					if (hasLastCards) {
+						this.lastCards = msg.turnData.lastData;
+						this.showLastCards();
+					}
+				}
+			} else {
+				// 不是轮到自己，只更新显示
+				if (msg.turnData.lastPlayedId) {
+					this.lastPlayedId = String(msg.turnData.lastPlayedId);
+				}
+				if (msg.turnData.lastData && msg.turnData.lastData.length > 0) {
+					this.lastCards = msg.turnData.lastData;
+					this.showLastCards();
+				}
 			}
-			if (msg.turnData.lastPlayedId) {
-				this.lastPlayedId = msg.turnData.lastPlayedId;
-			}
-			// 可以在这里添加UI更新逻辑
-			console.log(`当前回合: 第${msg.turnData.turnNumber}回合, 座位号: ${msg.turnData.currentSeatIndex}`);
-			if (msg.currentPlayer) {
-				console.log(`当前玩家: ${msg.currentPlayer.nickname}`);
+
+			// 房主负责同步游戏状态到服务器（确保掉线重连时能恢复）
+			if (this.currentPlayerId === this.currentRoomData.ownerId) {
+				this.syncGameState();
 			}
 		});
 
 		// 监听回合超时消息
 		this.roomClient.listenMsg("serverMsg/TurnTimeout", (msg) => {
-			console.log("[TurnTimeout] 回合超时");
+			// 检查是否是当前玩家的回合
+			const currentUser = this.currentRoomData.users.find((u) => u.id === this.currentPlayerId);
+			if (!currentUser || currentUser.seatIndex === undefined) {
+				return;
+			}
+
+			// 检查是否轮到当前玩家
+			if (currentUser.seatIndex !== this.currentRoomData.turnData?.currentSeatIndex) {
+				return;
+			}
+
+			// 检查上一个出牌的玩家是否是当前玩家（说明一圈下来没人接牌）
+			if (this.lastPlayedId === this.currentPlayerId && this.lastCards.length > 0) {
+				// 自动出第一张牌
+				this.autoPlayFirstCard();
+			}
 		});
 	}
 
@@ -71,22 +125,15 @@ export class CardGame extends GameBase {
 	 * 初始化回合制（由房主调用）
 	 */
 	public initTurnBased(firstSeatIndex: number = 0, turnTimeout: number = 30000) {
-		console.log("准备初始化回合制...", this.currentPlayerId, this.currentRoomData?.ownerId);
-
 		// 检查是否是房主
 		if (this.currentPlayerId !== this.currentRoomData?.ownerId) {
-			console.log("不是房主，无需初始化回合制");
 			return;
 		}
 
-		console.log("房主初始化回合制");
 		this.roomClient
 			.callApi("InitTurn", {
 				firstPlayerSeatIndex: firstSeatIndex,
 				turnTimeout: turnTimeout,
-			})
-			.then((res) => {
-				console.log("回合制初始化成功", res);
 			})
 			.catch((err) => {
 				console.error("回合制初始化失败:", err);
@@ -138,7 +185,17 @@ export class CardGame extends GameBase {
 	/** 摸牌 */
 	public drawCard(playerId: string, num: number = 1) {
 		for (let i = 0; i < num; i++) {
+			// 检查牌库是否还有牌
+			if (this.cards.length === 0) {
+				console.warn("牌库已空，无法摸牌");
+				break;
+			}
+
 			const card = this.cards.shift();
+			if (!card) {
+				break;
+			}
+
 			if (!this.playerCards[playerId]) {
 				this.playerCards[playerId] = [];
 			}
@@ -166,9 +223,19 @@ export class CardGame extends GameBase {
 			return;
 		}
 
-		// 获取选中的牌
-		const cards = this.playerCards[this.currentPlayerId]?.filter((card) => card.selected);
-		if (!cards || cards.length === 0) {
+		// 获取选中的牌及其对应的节点
+		const selectedNodes: Node[] = [];
+		const cards: Card[] = [];
+
+		for (const child of this.cardContainer.children) {
+			const cardItem = child.getComponent(CardItem);
+			if (cardItem?.isSelected && cardItem.card) {
+				selectedNodes.push(child);
+				cards.push(cardItem.card);
+			}
+		}
+
+		if (cards.length === 0) {
 			console.error("请选择要出的牌");
 			return;
 		}
@@ -187,16 +254,27 @@ export class CardGame extends GameBase {
 				this.playerCards[this.currentPlayerId].splice(index, 1);
 			}
 		}
+
+		// 销毁出牌的节点
+		for (const node of selectedNodes) {
+			node.destroy();
+		}
+
 		// 更新本地状态
 		this.lastCards = cards;
 		this.lastPlayedId = this.currentPlayerId;
 
-		console.log(`出牌成功: ${cards.map((c) => c.name).join(", ")}`);
-
 		// 同步游戏状态到服务端
 		this.syncGameState();
 
-		// 调用API结束回合
+		// 检查是否获胜（手牌出完）
+		const isWinner = this.checkWinner(this.currentPlayerId);
+		// 如果获胜，触发游戏结束
+		if (isWinner) {
+			this.gameOver(this.currentPlayerId);
+			return;
+		}
+		// 调用API结束回合，将出牌数据广播给所有玩家
 		this.roomClient
 			.callApi("NextTurn", {
 				data: {
@@ -205,10 +283,128 @@ export class CardGame extends GameBase {
 				},
 			})
 			.then(() => {
-				console.log("回合结束成功");
+				// 重新排列剩余手牌
+				this.showPlayerCards();
+				// 显示上次出的牌
+				this.showLastCards();
 			})
 			.catch((err) => {
-				console.error("回合结束失败:", err);
+				console.error("出牌失败:", err);
+			});
+	}
+
+	/** 自动出第一张牌（超时且无人接牌时使用） */
+	private autoPlayFirstCard() {
+		// 检查回合制是否已初始化
+		if (!this.currentRoomData.turnData) {
+			return;
+		}
+
+		// 获取当前玩家的座位号
+		const currentUser = this.currentRoomData.users.find((u) => u.id === this.currentPlayerId);
+		if (!currentUser || currentUser.seatIndex === undefined) {
+			return;
+		}
+
+		// 检查是否轮到当前玩家
+		if (currentUser.seatIndex !== this.currentRoomData.turnData.currentSeatIndex) {
+			return;
+		}
+
+		// 获取手牌
+		const handCards = this.playerCards[this.currentPlayerId];
+		if (!handCards || handCards.length === 0) {
+			return;
+		}
+
+		// 获取排序后的第一张牌（按rank排序）
+		const sortedCards = [...handCards].sort((a, b) => {
+			if (a.rank !== b.rank) {
+				return a.rank - b.rank;
+			}
+			return a.tag - b.tag;
+		});
+
+		const firstCard = sortedCards[0];
+
+		// 检查是否是王（王不能单独出）
+		if (this.isJoker(firstCard)) {
+			// 如果是王，尝试找第一张非王的牌
+			const nonJokerCard = sortedCards.find((c) => !this.isJoker(c));
+			if (!nonJokerCard) {
+				// 如果全是王，则过牌
+				this.pass();
+				return;
+			}
+			// 出第一张非王的牌
+			this.playSpecificCard(nonJokerCard);
+		} else {
+			// 出第一张牌
+			this.playSpecificCard(firstCard);
+		}
+	}
+
+	/** 出指定的牌 */
+	private playSpecificCard(card: Card) {
+		// 检查是否是王（王不能单独出）
+		if (this.isJoker(card)) {
+			return;
+		}
+
+		// 检查出牌是否合法
+		const cards = [card];
+		if (!this.checkCardValid(cards)) {
+			// 如果单张牌不合法，则过牌
+			this.pass();
+			return;
+		}
+
+		// 从手牌中移除这张牌
+		const index = this.playerCards[this.currentPlayerId].indexOf(card);
+		if (index === -1) {
+			return;
+		}
+		this.playerCards[this.currentPlayerId].splice(index, 1);
+
+		// 找到对应的节点并销毁
+		for (const child of this.cardContainer.children) {
+			const cardItem = child.getComponent(CardItem);
+			if (cardItem?.card === card) {
+				child.destroy();
+				break;
+			}
+		}
+
+		// 更新本地状态
+		this.lastCards = cards;
+		this.lastPlayedId = this.currentPlayerId;
+
+		// 同步游戏状态到服务端
+		this.syncGameState();
+
+		// 检查是否获胜（手牌出完）
+		const isWinner = this.checkWinner(this.currentPlayerId);
+		if (isWinner) {
+			this.gameOver(this.currentPlayerId);
+			return;
+		}
+
+		// 调用API结束回合，将出牌数据广播给所有玩家
+		this.roomClient
+			.callApi("NextTurn", {
+				data: {
+					lastPlayedId: this.currentPlayerId,
+					lastCards: cards,
+				},
+			})
+			.then(() => {
+				// 重新排列剩余手牌
+				this.showPlayerCards();
+				// 显示上次出的牌
+				this.showLastCards();
+			})
+			.catch((err) => {
+				console.error("自动出牌失败:", err);
 			});
 	}
 
@@ -253,6 +449,52 @@ export class CardGame extends GameBase {
 
 			if (cardItem) {
 				cardItem.init(card);
+			}
+
+			// 设置卡牌位置，按顺序排列
+			const x = startX + i * (cardWidth + cardSpacing);
+			cardNode.setPosition(x, 0, 0);
+		}
+	}
+
+	/** 显示上次出的牌 */
+	public showLastCards() {
+		// 检查容器是否存在
+		if (!this.lastCardsContainer) {
+			console.warn("lastCardsContainer 未设置");
+			return;
+		}
+
+		// 清空容器中的旧卡牌
+		this.lastCardsContainer.removeAllChildren();
+
+		// 如果没有上次出的牌，直接返回
+		if (!this.lastCards || this.lastCards.length === 0) {
+			return;
+		}
+
+		// 计算卡牌间距和起始位置
+		const cardWidth = 150; // 卡牌宽度
+		const cardSpacing = -100; // 卡牌之间的间距（紧凑排列）
+		const totalWidth = this.lastCards.length * cardWidth + (this.lastCards.length - 1) * cardSpacing;
+		const startX = -totalWidth / 2 + cardWidth / 2;
+
+		// 创建并排列卡牌
+		for (let i = 0; i < this.lastCards.length; i++) {
+			const card = this.lastCards[i];
+			const cardNode = instantiate(this.cardPrefab);
+			cardNode.parent = this.lastCardsContainer;
+
+			// 获取CardItem组件
+			let cardItem = cardNode.getComponent(CardItem);
+			if (!cardItem) {
+				cardItem = cardNode.addComponent(CardItem);
+			}
+
+			if (cardItem) {
+				cardItem.init(card);
+				// 禁用卡牌的点击和交互（这些是已出的牌，不能选择）
+				cardItem.node.off(Node.EventType.TOUCH_END);
 			}
 
 			// 设置卡牌位置，按顺序排列
@@ -356,13 +598,12 @@ export class CardGame extends GameBase {
 			return null;
 		}
 
-		// 三张及三张以上相同点数的牌
+		// 三张及三张以上相同点数的牌（炸弹）
 		if (len >= 3) {
 			const uniqueRanks = Array.from(new Set(normalCards.map((c) => c.rank)));
 			if (uniqueRanks.length === 1) {
 				return { type: "bomb", rank: uniqueRanks[0] };
 			}
-			return null;
 		}
 
 		// 顺子（至少3张连续的牌）
@@ -401,7 +642,7 @@ export class CardGame extends GameBase {
 	/** 检查是否能组成顺子 */
 	private canFormStraight(normalCards: Card[], jokerCount: number): boolean {
 		const totalCards = normalCards.length + jokerCount;
-		if (normalCards.length + jokerCount < 3) {
+		if (totalCards < 3) {
 			return false;
 		}
 
@@ -411,30 +652,59 @@ export class CardGame extends GameBase {
 			pointCount.set(card.tag, (pointCount.get(card.tag) || 0) + 1);
 		}
 
-		// 找到最小和最大点数
-		const points = Array.from(pointCount.keys()).sort((a, b) => CardRank[a] - CardRank[b]);
-		if (points.length === 0) {
-			return false;
-		}
-
-		let needJokers = 0;
-		let minPoint = points[0];
-		let maxPoint = points[points.length - 1];
-
-		if (minPoint == 3) maxPoint = RankCard[CardRank[3] + totalCards / 2 - 1];
-		if (maxPoint == 1) minPoint = RankCard[CardRank[1] - totalCards / 2 + 1];
-
-		for (let i = minPoint; i <= maxPoint; i++) {
-			const count = pointCount.get(i) || 0;
-			if (count === 0) {
-				needJokers += 2;
-			} else if (count == 1) {
-				needJokers++;
-			} else if (count > 2) {
+		// 检查是否有重复的牌（顺子每张牌只能有1张）
+		const allPoints = Array.from(pointCount.keys());
+		for (let i = 0; i < allPoints.length; i++) {
+			const point = allPoints[i];
+			const count = pointCount.get(point) || 0;
+			if (count > 1) {
 				return false; // 有重复的牌，不能组成顺子
 			}
 		}
-		return needJokers === jokerCount;
+
+		// 找到所有不同的点数（按rank排序）
+		const points = Array.from(pointCount.keys()).sort((a, b) => CardRank[a] - CardRank[b]);
+		if (points.length === 0) {
+			// 只有癞子，可以组成顺子（至少3张）
+			return jokerCount >= 3;
+		}
+
+		// 转换为rank数组
+		const ranks = points.map((p) => CardRank[p]).sort((a, b) => a - b);
+		const minRank = ranks[0];
+		const maxRank = ranks[ranks.length - 1];
+
+		// 尝试所有可能的顺子范围
+		// 顺子长度从已有牌的数量到总牌数
+		for (let length = points.length; length <= totalCards && length <= 12; length++) {
+			// 尝试每个可能的起始rank
+			// 起始rank的范围：必须包含所有已有的牌，所以起始rank <= minRank
+			// 同时要确保结束rank <= 12（A的rank）
+			const maxStartRank = Math.min(minRank, 13 - length);
+
+			for (let startRank = Math.max(1, maxRank - length + 1); startRank <= maxStartRank; startRank++) {
+				let needJokers = 0;
+
+				// 检查从startRank开始的连续length张牌
+				for (let rank = startRank; rank < startRank + length; rank++) {
+					const point = RankCard[rank];
+					const count = pointCount.get(point) || 0;
+
+					if (count === 0) {
+						// 缺少这张牌，需要1个癞子
+						needJokers++;
+					}
+					// count === 1 时，已经有这张牌了，不需要癞子
+				}
+
+				// 如果需要的癞子数量正好等于jokerCount，则可以组成顺子
+				if (needJokers === jokerCount) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/** 获取顺子中的最大rank */
@@ -460,38 +730,116 @@ export class CardGame extends GameBase {
 			pointCount.set(card.tag, (pointCount.get(card.tag) || 0) + 1);
 		}
 
-		// 找到最小和最大点数
-		const points = Array.from(pointCount.keys()).sort((a, b) => CardRank[a] - CardRank[b]);
-		if (points.length === 0) {
-			return false;
-		}
-
-		let needJokers = 0;
-		let minPoint = points[0];
-		let maxPoint = points[points.length - 1];
-
-		if (minPoint == 3) maxPoint = RankCard[CardRank[3] + totalCards - 1];
-		if (maxPoint == 1) minPoint = RankCard[CardRank[1] - totalCards + 1];
-
-		for (let i = minPoint; i <= maxPoint; i++) {
-			const count = pointCount.get(i) || 0;
-			if (count === 0) {
-				needJokers++;
-			} else if (count > 1) {
-				return false; // 有重复的牌，不能组成顺子
+		// 检查是否有超过2张的牌（连对中每个点数最多2张）
+		const allPoints = Array.from(pointCount.keys());
+		for (let i = 0; i < allPoints.length; i++) {
+			const point = allPoints[i];
+			const count = pointCount.get(point) || 0;
+			if (count > 2) {
+				return false; // 某个点数超过2张，不能组成连对
 			}
 		}
-		return needJokers === jokerCount;
+
+		// 找到所有不同的点数（按rank排序）
+		const points = Array.from(pointCount.keys()).sort((a, b) => CardRank[a] - CardRank[b]);
+		if (points.length === 0) {
+			// 只有癞子，可以组成连对（至少3对）
+			return jokerCount >= 6;
+		}
+
+		// 转换为rank数组
+		const ranks = points.map((p) => CardRank[p]).sort((a, b) => a - b);
+		const minRank = ranks[0];
+		const maxRank = ranks[ranks.length - 1];
+
+		// 计算连对的长度（对数）
+		const pairCount = totalCards / 2;
+
+		// 尝试所有可能的连对范围
+		for (let length = points.length; length <= pairCount && length <= 12; length++) {
+			// 尝试每个可能的起始rank
+			const minStartRank = Math.max(1, maxRank - length + 1);
+			const maxStartRank = Math.min(minRank, 13 - length);
+
+			for (let startRank = minStartRank; startRank <= maxStartRank; startRank++) {
+				let needJokers = 0;
+
+				// 检查从startRank开始的连续length对
+				for (let rank = startRank; rank < startRank + length; rank++) {
+					const point = RankCard[rank];
+					const count = pointCount.get(point) || 0;
+
+					if (count === 0) {
+						// 缺少这一对，需要2个癞子
+						needJokers += 2;
+					} else if (count === 1) {
+						// 只有1张，需要1个癞子组成一对
+						needJokers += 1;
+					}
+					// count === 2 时，已经有完整的一对了，不需要癞子
+				}
+
+				// 如果需要的癞子数量正好等于jokerCount，则可以组成连对
+				if (needJokers === jokerCount) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/** 获取连对中的最大rank */
 	private getConsecutivePairRanks(normalCards: Card[], jokerCount: number): number {
-		let sort = normalCards.sort((a, b) => a.rank - b.rank);
-		if (sort[sort.length - 1].rank - sort[0].rank + 1 === (sort.length + jokerCount) / 2) {
-			return sort[sort.length - 1].rank;
-		} else {
-			return Math.min(sort[sort.length - 1].rank + jokerCount / 2, CardRank[1]);
+		// 统计每个点数的数量
+		const pointCount = new Map<number, number>();
+		for (const card of normalCards) {
+			pointCount.set(card.tag, (pointCount.get(card.tag) || 0) + 1);
 		}
+
+		// 找到所有不同的点数（按rank排序）
+		const points = Array.from(pointCount.keys()).sort((a, b) => CardRank[a] - CardRank[b]);
+		if (points.length === 0) {
+			// 只有癞子，返回最大可能的rank
+			return Math.min(jokerCount / 2, 12); // A的rank是12
+		}
+
+		// 转换为rank数组
+		const ranks = points.map((p) => CardRank[p]).sort((a, b) => a - b);
+		const minRank = ranks[0];
+		const maxRank = ranks[ranks.length - 1];
+		const totalCards = normalCards.length + jokerCount;
+		const pairCount = totalCards / 2;
+
+		// 找到能组成连对的最大rank
+		for (let length = points.length; length <= pairCount && length <= 12; length++) {
+			const minStartRank = Math.max(1, maxRank - length + 1);
+			const maxStartRank = Math.min(minRank, 13 - length);
+
+			for (let startRank = minStartRank; startRank <= maxStartRank; startRank++) {
+				let needJokers = 0;
+
+				// 检查从startRank开始的连续length对
+				for (let rank = startRank; rank < startRank + length; rank++) {
+					const point = RankCard[rank];
+					const count = pointCount.get(point) || 0;
+
+					if (count === 0) {
+						needJokers += 2;
+					} else if (count === 1) {
+						needJokers += 1;
+					}
+				}
+
+				// 如果需要的癞子数量正好等于jokerCount，返回这个连对的最大rank
+				if (needJokers === jokerCount) {
+					return startRank + length - 1;
+				}
+			}
+		}
+
+		// 如果找不到，返回最大rank
+		return maxRank;
 	}
 
 	/** 对手牌进行排序 */
@@ -517,22 +865,17 @@ export class CardGame extends GameBase {
 
 		// 检查是否轮到当前玩家
 		if (!this.isMyTurn()) {
-			console.error("不是你的回合，无法过牌");
+			console.error("不是你的回合");
 			return false;
 		}
 
-		console.log("过牌");
-
 		// 调用API结束回合（不出牌）
+		// 过牌时只传空数组，后端会保持上一次出牌的信息
 		this.roomClient
 			.callApi("NextTurn", {
 				data: {
-					lastPlayedId: this.currentPlayerId,
 					lastCards: [], // 空数组表示过牌
 				},
-			})
-			.then(() => {
-				console.log("过牌成功");
 			})
 			.catch((err) => {
 				console.error("过牌失败:", err);
@@ -621,15 +964,16 @@ export class CardGame extends GameBase {
 	 * 同步游戏状态到服务端
 	 */
 	private syncGameState() {
+		// 检查 roomClient 是否已初始化
+		if (!this.roomClient) {
+			console.warn("roomClient 未初始化，无法同步游戏状态");
+			return;
+		}
+
 		const gameState = this.getGameState();
-		this.roomClient
-			.callApi("SyncGameState", { gameState })
-			.then(() => {
-				console.log("[SyncGameState] 游戏状态已同步");
-			})
-			.catch((err) => {
-				console.error("[SyncGameState] 同步失败:", err);
-			});
+		this.roomClient.callApi("SyncGameState", { gameState }).catch((err) => {
+			console.error("游戏状态同步失败:", err);
+		});
 	}
 
 	/**
@@ -638,11 +982,15 @@ export class CardGame extends GameBase {
 	 */
 	private async restoreGameState(): Promise<boolean> {
 		try {
+			// 检查 roomClient 是否已初始化
+			if (!this.roomClient) {
+				return false;
+			}
+
 			const res = await this.roomClient.callApi("GetGameState", {});
 
 			if (res.isSucc && res.res.hasState && res.res.gameState) {
 				const state = res.res.gameState;
-				console.log("[RestoreGameState] 恢复游戏状态:", state);
 
 				// 反序列化卡牌数据
 				this.cards = (state.cards || []).map((data: any) => this.deserializeCard(data));
@@ -663,23 +1011,48 @@ export class CardGame extends GameBase {
 				this.lastPlayedId = state.lastPlayedId || "";
 				this.currentSeatIndex = state.currentSeatIndex || 0;
 
-				console.log("[RestoreGameState] 恢复完成, 手牌数量:", Object.keys(this.playerCards).length);
-
 				return true;
 			}
 
 			return false;
 		} catch (err) {
-			console.error("[RestoreGameState] 恢复失败:", err);
+			console.error("恢复游戏状态失败:", err);
 			return false;
 		}
+	}
+
+	/**
+	 * 等待房主同步游戏状态（非房主使用）
+	 * 最多重试10次，每次间隔500ms
+	 */
+	private async waitForGameState(): Promise<void> {
+		// 检查 roomClient 是否已初始化
+		if (!this.roomClient) {
+			console.error("roomClient 未初始化，无法获取游戏状态");
+			return;
+		}
+
+		const maxRetries = 10;
+		const retryInterval = 500; // 500ms
+
+		for (let i = 0; i < maxRetries; i++) {
+			// 等待一段时间
+			await new Promise((resolve) => setTimeout(resolve, retryInterval));
+
+			// 尝试恢复游戏状态
+			const restored = await this.restoreGameState();
+			if (restored) {
+				return;
+			}
+		}
+
+		console.error("等待游戏状态超时");
 	}
 
 	/**
 	 * 组件销毁时清理
 	 */
 	onDestroy() {
-		console.log("[CardGame] 组件销毁，清理数据");
 		// 清空所有游戏数据
 		this.cards = [];
 		this.playerCards = {};

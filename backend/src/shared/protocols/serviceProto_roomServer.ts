@@ -130,7 +130,7 @@ export interface ServiceType {
 }
 
 export const serviceProto: ServiceProto<ServiceType> = {
-    "version": 30,
+    "version": 31,
     "services": [
         {
             "id": 11,
@@ -1102,8 +1102,36 @@ export const serviceProto: ServiceProto<ServiceType> = {
                     "id": 0,
                     "name": "data",
                     "type": {
-                        "type": "Interface"
-                    }
+                        "type": "Interface",
+                        "properties": [
+                            {
+                                "id": 0,
+                                "name": "lastPlayedId",
+                                "type": {
+                                    "type": "String"
+                                },
+                                "optional": true
+                            },
+                            {
+                                "id": 1,
+                                "name": "lastCards",
+                                "type": {
+                                    "type": "Array",
+                                    "elementType": {
+                                        "type": "Any"
+                                    }
+                                },
+                                "optional": true
+                            }
+                        ],
+                        "indexSignature": {
+                            "keyType": "String",
+                            "type": {
+                                "type": "Any"
+                            }
+                        }
+                    },
+                    "optional": true
                 }
             ]
         },

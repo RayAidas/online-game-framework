@@ -4,6 +4,7 @@ import { FrameSyncService } from "../../services/FrameSyncService";
 import { RedisRoomStateService } from "../../services/RedisRoomStateService";
 import { RoomStateService } from "../../services/RoomStateService";
 import { MsgUpdateRoomState } from "../../shared/protocols/roomServer/clientMsg/MsgUpdateRoomState";
+import { ReqNextTurn } from "../../shared/protocols/roomServer/PtlNextTurn";
 import { ServiceType } from "../../shared/protocols/serviceProto_roomServer";
 import { MsgSyncFrame } from "../../shared/types/FrameSync";
 import { GamePhase } from "../../shared/types/GamePhase";
@@ -290,7 +291,7 @@ export class Room {
 	/**
 	 * 切换到下一个玩家的回合
 	 */
-	nextTurn(data: { [key: string]: any }) {
+	nextTurn(data: ReqNextTurn["data"]) {
 		if (!this.data.turnData || !this.data.turnData.isEnabled) {
 			this.logger.log("[TurnBased] 回合制未启用");
 			return;
@@ -302,8 +303,17 @@ export class Room {
 		this.data.turnData.currentSeatIndex = nextSeatIndex;
 		this.data.turnData.turnNumber++;
 		this.data.turnData.turnStartTime = Date.now();
-		if (data.lastPlayedId != void 0) this.data.turnData.lastPlayedId = data.lastPlayedId;
-		if (data.lastCards != void 0) this.data.turnData.lastData = data.lastCards;
+
+		// 只有在出牌时才更新 lastPlayedId 和 lastData
+		// 过牌时 lastCards 为空数组，不应该更新
+		if (data?.lastCards && data.lastCards.length > 0) {
+			// 出牌：更新 lastPlayedId 和 lastData
+			if (data.lastPlayedId != void 0) {
+				this.data.turnData.lastPlayedId = data.lastPlayedId;
+			}
+			this.data.turnData.lastData = data.lastCards;
+		}
+		// 过牌时：不更新 lastPlayedId 和 lastData，保持上一次出牌的信息
 		// 获取当前回合玩家信息
 		const currentPlayer = this.data.users.find((u) => u.seatIndex === nextSeatIndex);
 

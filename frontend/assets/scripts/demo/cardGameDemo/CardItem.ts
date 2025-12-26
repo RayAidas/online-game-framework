@@ -12,6 +12,8 @@ export class CardItem extends Component {
 	private liftOffset: number = 50; // 上移距离
 	public isSelected: boolean = false; // 是否已选中
 
+	public card: Card = null!;
+
 	start() {
 		// 记录原始Y位置（如果还没有记录）
 		if (this.originalY === 0) {
@@ -28,6 +30,7 @@ export class CardItem extends Component {
 	}
 
 	init(card: Card) {
+		this.card = card;
 		// 记录原始Y位置
 		this.originalY = this.node.position.y;
 
