@@ -2,28 +2,25 @@ import { ApiCall } from "tsrpc";
 import { TokenService } from "../../services/TokenService";
 import { UserService } from "../../services/UserService";
 import { ReqRegister, ResRegister } from "../../shared/protocols/userServer/PtlRegister";
+import { PasswordService } from "../../services/PasswordService";
 
 export default async function (call: ApiCall<ReqRegister, ResRegister>) {
 	const { username, password } = call.req;
 
 	// 参数验证
 	if (!username || !password) {
-		return call.error("用户名、密码和确认密码不能为空");
+		return call.error("用户名和密码不能为空");
 	}
-
-	// // 验证密码确认
-	// if (password !== confirmPassword) {
-	// 	return call.error("两次输入的密码不一致");
-	// }
 
 	// 验证用户名长度
 	if (username.length < 3 || username.length > 20) {
 		return call.error("用户名长度必须在3-20个字符之间");
 	}
 
-	// 验证密码长度
-	if (password.length < 6) {
-		return call.error("密码长度不能少于6个字符");
+	// 使用 PasswordService 进行密码策略验证（与注册逻辑保持一致）
+	const passwordValidation = PasswordService.validatePasswordPolicy(password);
+	if (!passwordValidation.isValid) {
+		return call.error("密码不符合安全策略：" + passwordValidation.errors.join("；"));
 	}
 
 	try {
